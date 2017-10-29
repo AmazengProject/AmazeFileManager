@@ -116,14 +116,7 @@ public class EncryptService extends Service {
             else totalSize = baseFile.length(context);
 
             progressHandler = new ProgressHandler(1, totalSize);
-            progressHandler.setProgressListener(new ProgressHandler.ProgressListener() {
-                @Override
-                public void onProgressed(String fileName, int sourceFiles, int sourceProgress,
-                                         long totalSize, long writtenSize, int speed) {
-
-                    publishResults(fileName, sourceFiles, sourceProgress, totalSize, writtenSize, speed);
-                }
-            });
+            progressHandler.setProgressListener(EncryptService.this::publishResults);
             serviceWatcherUtil = new ServiceWatcherUtil(progressHandler, totalSize);
 
             CopyDataParcelable dataPackage = new CopyDataParcelable();
@@ -175,7 +168,8 @@ public class EncryptService extends Service {
 
             if (!broadcastResult) {
 
-                Intent intent = new Intent("loadlist");
+                Intent intent = new Intent(MainActivity.KEY_INTENT_LOAD_LIST);
+                intent.putExtra(MainActivity.KEY_INTENT_LOAD_LIST_FILE, decryptPath);
                 sendBroadcast(intent);
             } else {
                 Intent intent = new Intent(EncryptDecryptUtils.DECRYPT_BROADCAST);

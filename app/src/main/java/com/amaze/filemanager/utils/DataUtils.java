@@ -7,6 +7,9 @@ import com.cloudrail.si.services.Box;
 import com.cloudrail.si.services.Dropbox;
 import com.cloudrail.si.services.GoogleDrive;
 import com.cloudrail.si.services.OneDrive;
+import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
+import com.googlecode.concurrenttrees.radix.node.concrete.voidvalue.VoidValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +27,8 @@ public class DataUtils {
     public static final int DELETE = 0, COPY = 1, MOVE = 2, NEW_FOLDER = 3,
             RENAME = 4, NEW_FILE = 5, EXTRACT = 6, COMPRESS = 7;
 
-    private ArrayList<String> hiddenfiles = new ArrayList<>(), gridfiles = new ArrayList<>(),
+    private ConcurrentRadixTree<VoidValue> hiddenfiles = new ConcurrentRadixTree<>(new DefaultCharArrayNodeFactory());
+    private ArrayList<String> gridfiles = new ArrayList<>(),
             listfiles = new ArrayList<>(), history = new ArrayList<>(), storages = new ArrayList<>();
 
     private ArrayList<Item> list = new ArrayList<>();
@@ -105,7 +109,7 @@ public class DataUtils {
     }
 
     public void clear() {
-        hiddenfiles = new ArrayList<>();
+        hiddenfiles = new ConcurrentRadixTree<>(new DefaultCharArrayNodeFactory());
         gridfiles = new ArrayList<>();
         listfiles = new ArrayList<>();
         history = new ArrayList<>();
@@ -204,13 +208,7 @@ public class DataUtils {
             books.add(i);
         }
         if (refreshdrawer && dataChangeListener != null) {
-            AppConfig.runInBackground(new Runnable() {
-                @Override
-                public void run() {
-
-                    dataChangeListener.onBookAdded(i, true);
-                }
-            });
+            AppConfig.runInBackground(() -> dataChangeListener.onBookAdded(i, true));
         }
     }
 
@@ -226,16 +224,10 @@ public class DataUtils {
 
         synchronized (hiddenfiles) {
 
-            hiddenfiles.add(i);
+            hiddenfiles.put(i, VoidValue.SINGLETON);
         }
         if (dataChangeListener != null) {
-            AppConfig.runInBackground(new Runnable() {
-                @Override
-                public void run() {
-
-                    dataChangeListener.onHiddenFileAdded(i);
-                }
-            });
+            AppConfig.runInBackground(() -> dataChangeListener.onHiddenFileAdded(i));
         }
     }
 
@@ -246,13 +238,7 @@ public class DataUtils {
             hiddenfiles.remove(i);
         }
         if (dataChangeListener != null) {
-            AppConfig.runInBackground(new Runnable() {
-                @Override
-                public void run() {
-
-                    dataChangeListener.onHiddenFileRemoved(i);
-                }
-            });
+            AppConfig.runInBackground(() -> dataChangeListener.onHiddenFileRemoved(i));
         }
     }
 
@@ -267,13 +253,7 @@ public class DataUtils {
             history.add(i);
         }
         if (dataChangeListener != null) {
-            AppConfig.runInBackground(new Runnable() {
-                @Override
-                public void run() {
-
-                    dataChangeListener.onHistoryAdded(i);
-                }
-            });
+            AppConfig.runInBackground(() -> dataChangeListener.onHistoryAdded(i));
         }
     }
 
@@ -334,13 +314,16 @@ public class DataUtils {
         return null;
     }
 
-    public ArrayList<String> getHiddenfiles() {
+    public boolean isFileHidden(String path) {
+        return getHiddenFiles().getValueForExactKey(path) != null;
+    }
+
+    public ConcurrentRadixTree<VoidValue> getHiddenFiles() {
         return hiddenfiles;
     }
 
-    public synchronized void setHiddenfiles(ArrayList<String> hiddenfiles) {
-        if (hiddenfiles != null)
-            this.hiddenfiles = hiddenfiles;
+    public synchronized void setHiddenFiles(ConcurrentRadixTree<VoidValue> hiddenfiles) {
+        if (hiddenfiles != null) this.hiddenfiles = hiddenfiles;
     }
 
     public ArrayList<String> getGridFiles() {

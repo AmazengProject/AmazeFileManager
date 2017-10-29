@@ -1,9 +1,9 @@
 package com.amaze.filemanager.asynchronous.asynctasks;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
@@ -14,12 +14,13 @@ import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.activities.MainActivity;
-import com.amaze.filemanager.filesystem.HybridFileParcelable;
-import com.amaze.filemanager.filesystem.HybridFile;
-import com.amaze.filemanager.fragments.MainFragment;
 import com.amaze.filemanager.asynchronous.services.CopyService;
+import com.amaze.filemanager.filesystem.HybridFile;
+import com.amaze.filemanager.filesystem.HybridFileParcelable;
+import com.amaze.filemanager.fragments.MainFragment;
 import com.amaze.filemanager.utils.DataUtils;
 import com.amaze.filemanager.utils.MainActivityHelper;
+import com.amaze.filemanager.utils.OnFileFound;
 import com.amaze.filemanager.utils.OpenMode;
 import com.amaze.filemanager.utils.ServiceWatcherUtil;
 import com.amaze.filemanager.utils.Utils;
@@ -36,8 +37,9 @@ import java.util.Set;
  * Created by arpitkh996 on 12-01-2016, modified by Emmanuel Messulam<emmanuelbendavid@gmail.com>
  *
  *  This AsyncTask works by creating a tree where each folder that can be fusioned together with
- *  another in the destination is a node (CopyNode), each node is copied when the conflicts are dealt
- *  with (the dialog is shown, and the tree is walked via a BFS).
+ *  another in the destination is a node (CopyNode). While the tree is being created an indeterminate
+ *  ProgressDialog is shown. Each node is copied when the conflicts are dealt with
+ *  (the dialog is shown, and the tree is walked via a BFS).
  *  If the process is cancelled (via the button in the dialog) the dialog closes without any more code
  *  to be executed, finishCopying() is never executed so no changes are made.
  */
@@ -54,6 +56,7 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
     private int counter = 0;
     private MainActivity mainActivity;
     private Context context;
+    private ProgressDialog dialog;
     private boolean rootMode = false;
     private OpenMode openMode = OpenMode.FILE;
     private DO_FOR_ALL_ELEMENTS dialogState = null;
@@ -74,6 +77,12 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
         this.rootMode = rootMode;
 
         this.path = path;
+    }
+
+    @Override
+    protected void onPreExecute() {
+        super.onPreExecute();
+        dialog = ProgressDialog.show(context, "", context.getString(R.string.processing), true);
     }
 
     @Override
@@ -109,17 +118,18 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
         return copyFolder;
     }
 
-    private ArrayList<HybridFileParcelable> checkConflicts(ArrayList<HybridFileParcelable> filesToCopy, HybridFile destination) {
-        ArrayList<HybridFileParcelable> conflictingFiles = new ArrayList<>();
-
-        for (HybridFileParcelable k1 : destination.listFiles(rootMode)) {
-            for (HybridFileParcelable j : filesToCopy) {
-                if (k1.getName().equals((j).getName())) {
-                    conflictingFiles.add(j);
+    private ArrayList<HybridFileParcelable> checkConflicts(final ArrayList<HybridFileParcelable> filesToCopy, HybridFile destination) {
+        final ArrayList<HybridFileParcelable> conflictingFiles = new ArrayList<>();
+        destination.forEachChildrenFile(context, rootMode, new OnFileFound() {
+            @Override
+            public void onFileFound(HybridFileParcelable file) {
+                for (HybridFileParcelable j : filesToCopy) {
+                    if (file.getName().equals((j).getName())) {
+                        conflictingFiles.add(j);
+                    }
                 }
             }
-        }
-
+        });
         return conflictingFiles;
     }
 
@@ -142,6 +152,8 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
 
             onEndDialog(null, null, null);
         }
+
+        dialog.dismiss();
     }
 
     private void startService(ArrayList<HybridFileParcelable> sourceFiles, String target, OpenMode openmode) {
@@ -176,21 +188,15 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
         dialogBuilder.positiveColor(accentColor);
         dialogBuilder.negativeColor(accentColor);
         dialogBuilder.neutralColor(accentColor);
-        dialogBuilder.onPositive(new MaterialDialog.SingleButtonCallback() {
-            @Override
-            public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-                if (checkBox.isChecked())
-                    dialogState = DO_FOR_ALL_ELEMENTS.DO_NOT_REPLACE;
-                doNotReplaceFiles(path, filesToCopy, conflictingFiles);
-            }
+        dialogBuilder.onPositive((dialog, which) -> {
+            if (checkBox.isChecked())
+                dialogState = DO_FOR_ALL_ELEMENTS.DO_NOT_REPLACE;
+            doNotReplaceFiles(path, filesToCopy, conflictingFiles);
         });
-        dialogBuilder.onNegative(new MaterialDialog.SingleButtonCallback() {
-            @Override
-            public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-                if (checkBox.isChecked())
-                    dialogState = DO_FOR_ALL_ELEMENTS.REPLACE;
-                replaceFiles(path, filesToCopy, conflictingFiles);
-            }
+        dialogBuilder.onNegative((dialog, which) -> {
+            if (checkBox.isChecked())
+                dialogState = DO_FOR_ALL_ELEMENTS.REPLACE;
+            replaceFiles(path, filesToCopy, conflictingFiles);
         });
 
         final MaterialDialog dialog = dialogBuilder.build();
@@ -314,7 +320,7 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
 
                     nextNodes.add(new CopyNode(path + "/"
                             + conflictingFiles.get(i).getName(),
-                            conflictingFiles.get(i).listFiles(rootMode)));
+                            conflictingFiles.get(i).listFiles(context, rootMode)));
 
                     filesToCopy.remove(filesToCopy.indexOf(conflictingFiles.get(i)));
                     conflictingFiles.remove(i);

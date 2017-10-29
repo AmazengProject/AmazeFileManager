@@ -580,4 +580,6 @@
     <string name="nobitcoinapp">Please install a bitcoin wallet</string>
 
     <string name="appbar_name" translatable="false">Amaze</string>
+    <string name="processing">Processing&#8230;</string>
+    <string name="failed_no_connection">Failed to load files. Please check your connection.</string>
 </resources>

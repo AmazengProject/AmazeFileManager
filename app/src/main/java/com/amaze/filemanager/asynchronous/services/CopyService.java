@@ -48,6 +48,7 @@ import com.amaze.filemanager.filesystem.HybridFile;
 import com.amaze.filemanager.filesystem.Operations;
 import com.amaze.filemanager.filesystem.RootHelper;
 import com.amaze.filemanager.fragments.ProcessViewerFragment;
+import com.amaze.filemanager.utils.OnFileFound;
 import com.amaze.filemanager.utils.files.CryptUtil;
 import com.amaze.filemanager.utils.CopyDataParcelable;
 import com.amaze.filemanager.utils.files.FileUtils;
@@ -148,14 +149,8 @@ public class CopyService extends Service {
             totalSourceFiles = sourceFiles.size();
             progressHandler = new ProgressHandler(totalSourceFiles, totalSize);
 
-            progressHandler.setProgressListener(new ProgressHandler.ProgressListener() {
-
-                @Override
-                public void onProgressed(String fileName, int sourceFiles, int sourceProgress,
-                                         long totalSize, long writtenSize, int speed) {
-                    publishResults(id, fileName, sourceFiles, sourceProgress, totalSize,
-                            writtenSize, speed, false, move);
-                }
+            progressHandler.setProgressListener((fileName, sourceFiles1, sourceProgress1, totalSize1, writtenSize, speed) -> {
+                publishResults(id, fileName, sourceFiles1, sourceProgress1, totalSize1, writtenSize, speed, false, move);
             });
 
             watcherUtil = new ServiceWatcherUtil(progressHandler, totalSize);
@@ -196,7 +191,8 @@ public class CopyService extends Service {
             watcherUtil.stopWatch();
             generateNotification(copy.failedFOps, move);
 
-            Intent intent = new Intent("loadlist");
+            Intent intent = new Intent(MainActivity.KEY_INTENT_LOAD_LIST);
+            intent.putExtra(MainActivity.KEY_INTENT_LOAD_LIST_FILE, targetPath);
             sendBroadcast(intent);
             stopSelf();
         }
@@ -210,14 +206,15 @@ public class CopyService extends Service {
 
             // even directories can end with CRYPT_EXTENSION
             if (sourceFile.isDirectory() && !sourceFile.getName().endsWith(CryptUtil.CRYPT_EXTENSION)) {
+                sourceFile.forEachChildrenFile(getApplicationContext(), ThemedActivity.rootMode, new OnFileFound() {
+                    @Override
+                    public void onFileFound(HybridFileParcelable file) {
+                        // iterating each file inside source files which were copied to find instance of
+                        // any copied / moved encrypted file
 
-                for (HybridFileParcelable file : sourceFile.listFiles(getApplicationContext(), ThemedActivity.rootMode)) {
-                    // iterating each file inside source files which were copied to find instance of
-                    // any copied / moved encrypted file
-
-                    findAndReplaceEncryptedEntry(file);
-
-                }
+                        findAndReplaceEncryptedEntry(file);
+                    }
+                });
             } else {
 
                 if (sourceFile.getName().endsWith(CryptUtil.CRYPT_EXTENSION)) {
@@ -365,7 +362,7 @@ public class CopyService extends Service {
             }
 
             private void copyFiles(final HybridFileParcelable sourceFile, final HybridFile targetFile,
-                                   ProgressHandler progressHandler) throws IOException {
+                                   final ProgressHandler progressHandler) throws IOException {
 
                 if (sourceFile.isDirectory()) {
                     if (progressHandler.getCancelled()) return;
@@ -383,12 +380,18 @@ public class CopyService extends Service {
                     targetFile.setLastModified(sourceFile.lastModified());
 
                     if(progressHandler.getCancelled()) return;
-                    ArrayList<HybridFileParcelable> filePaths = sourceFile.listFiles(c, false);
-                    for (HybridFileParcelable file : filePaths) {
-                        HybridFile destFile = new HybridFile(targetFile.getMode(), targetFile.getPath(),
-                                file.getName(), file.isDirectory());
-                        copyFiles(file, destFile, progressHandler);
-                    }
+                    sourceFile.forEachChildrenFile(c, false, new OnFileFound() {
+                        @Override
+                        public void onFileFound(HybridFileParcelable file) {
+                            HybridFile destFile = new HybridFile(targetFile.getMode(), targetFile.getPath(),
+                                    file.getName(), file.isDirectory());
+                            try {
+                                copyFiles(file, destFile, progressHandler);
+                            } catch (IOException e) {
+                                throw new IllegalStateException(e);//throw unchecked exception, no throws needed
+                            }
+                        }
+                    });
                 } else {
                     if (progressHandler.getCancelled()) return;
                     if (!Operations.isFileNameValid(sourceFile.getName())) {
