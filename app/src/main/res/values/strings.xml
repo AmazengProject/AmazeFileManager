@@ -122,7 +122,8 @@
     <string name="in_safe">Insufficient space</string>
     <string name="no_file_overwrite">No File Overwritten</string>
     <string name="skip">Skip</string>
-    <string name="overwrite">Overwrite</string>
+    <string name="keep_both">Keep both (will owerwrite if not selected)</string>
+    <string name="overwrite">Paste</string>
     <string name="not_allowed">Not Allowed</string>
     <string name="searching">Searching %s</string>
     <string name="done">Done</string>
