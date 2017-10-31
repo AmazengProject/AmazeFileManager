@@ -28,6 +28,7 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.database.Cursor;
@@ -61,6 +62,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.DrawerLayout;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -81,7 +83,12 @@ import android.widget.Toast;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
+import com.amaze.filemanager.activities.superclasses.ThemedActivity;
 import com.amaze.filemanager.adapters.DrawerAdapter;
+import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
+import com.amaze.filemanager.asynchronous.asynctasks.MoveFiles;
+import com.amaze.filemanager.asynchronous.asynctasks.PrepareCopyTask;
+import com.amaze.filemanager.asynchronous.services.CopyService;
 import com.amaze.filemanager.database.CloudContract;
 import com.amaze.filemanager.database.CloudHandler;
 import com.amaze.filemanager.database.CryptHandler;
@@ -90,24 +97,22 @@ import com.amaze.filemanager.database.UtilsHandler;
 import com.amaze.filemanager.database.models.CloudEntry;
 import com.amaze.filemanager.database.models.Tab;
 import com.amaze.filemanager.exceptions.CloudPluginException;
-import com.amaze.filemanager.filesystem.BaseFile;
 import com.amaze.filemanager.filesystem.FileUtil;
-import com.amaze.filemanager.filesystem.HFile;
+import com.amaze.filemanager.filesystem.HybridFile;
+import com.amaze.filemanager.filesystem.HybridFileParcelable;
+import com.amaze.filemanager.filesystem.PasteHelper;
 import com.amaze.filemanager.filesystem.RootHelper;
-import com.amaze.filemanager.fragments.AppsList;
+import com.amaze.filemanager.fragments.AppsListFragment;
 import com.amaze.filemanager.fragments.CloudSheetFragment;
 import com.amaze.filemanager.fragments.CloudSheetFragment.CloudConnectionCallbacks;
 import com.amaze.filemanager.fragments.FTPServerFragment;
 import com.amaze.filemanager.fragments.MainFragment;
-import com.amaze.filemanager.fragments.ProcessViewer;
+import com.amaze.filemanager.fragments.ProcessViewerFragment;
 import com.amaze.filemanager.fragments.SearchWorkerFragment;
 import com.amaze.filemanager.fragments.TabFragment;
-import com.amaze.filemanager.fragments.ZipViewer;
+import com.amaze.filemanager.fragments.ZipExplorerFragment;
+import com.amaze.filemanager.fragments.preference_fragments.PrefFrag;
 import com.amaze.filemanager.fragments.preference_fragments.QuickAccessPref;
-import com.amaze.filemanager.asynchronous.CopyService;
-import com.amaze.filemanager.asynchronous.DeleteTask;
-import com.amaze.filemanager.asynchronous.asynctasks.CopyFileCheck;
-import com.amaze.filemanager.asynchronous.asynctasks.MoveFiles;
 import com.amaze.filemanager.ui.dialogs.GeneralDialogCreation;
 import com.amaze.filemanager.ui.dialogs.RenameBookmark;
 import com.amaze.filemanager.ui.dialogs.RenameBookmark.BookmarkCallback;
@@ -119,8 +124,6 @@ import com.amaze.filemanager.ui.drawer.SectionItem;
 import com.amaze.filemanager.ui.views.RoundedImageView;
 import com.amaze.filemanager.ui.views.ScrimInsetsRelativeLayout;
 import com.amaze.filemanager.ui.views.appbar.AppBar;
-import com.amaze.filemanager.ui.views.appbar.SearchView;
-import com.amaze.filemanager.utils.AppConfig;
 import com.amaze.filemanager.utils.BookSorter;
 import com.amaze.filemanager.utils.DataUtils;
 import com.amaze.filemanager.utils.DataUtils.DataChangeListener;
@@ -131,8 +134,9 @@ import com.amaze.filemanager.utils.PreferenceUtils;
 import com.amaze.filemanager.utils.ServiceWatcherUtil;
 import com.amaze.filemanager.utils.TinyDB;
 import com.amaze.filemanager.utils.Utils;
+import com.amaze.filemanager.utils.application.AppConfig;
 import com.amaze.filemanager.utils.color.ColorUsage;
-import com.amaze.filemanager.utils.files.Futils;
+import com.amaze.filemanager.utils.files.FileUtils;
 import com.amaze.filemanager.utils.theme.AppTheme;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
@@ -146,10 +150,15 @@ import com.cloudrail.si.services.GoogleDrive;
 import com.cloudrail.si.services.OneDrive;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.plus.Plus;
+import com.google.android.gms.plus.model.people.Person;
 import com.readystatesoftware.systembartint.SystemBarTintManager;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -157,10 +166,12 @@ import java.util.regex.Pattern;
 import eu.chainfire.libsuperuser.Shell;
 
 import static android.os.Build.VERSION.SDK_INT;
-import static com.amaze.filemanager.fragments.preference_fragments.Preffrag.PREFERENCE_SHOW_SIDEBAR_FOLDERS;
-import static com.amaze.filemanager.fragments.preference_fragments.Preffrag.PREFERENCE_SHOW_SIDEBAR_QUICKACCESSES;
+import static com.amaze.filemanager.fragments.preference_fragments.PrefFrag.PREFERENCE_SHOW_SIDEBAR_FOLDERS;
+import static com.amaze.filemanager.fragments.preference_fragments.PrefFrag.PREFERENCE_SHOW_SIDEBAR_QUICKACCESSES;
 
-public class MainActivity extends ThemedActivity implements OnRequestPermissionsResultCallback,
+public class MainActivity extends ThemedActivity implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, OnRequestPermissionsResultCallback,
         SmbConnectionListener, DataChangeListener, BookmarkCallback,
         SearchWorkerFragment.HelperCallbacks, CloudConnectionCallbacks,
         LoaderManager.LoaderCallbacks<Cursor> {
@@ -177,7 +188,6 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     public ListView mDrawerList;
     public ScrimInsetsRelativeLayout mDrawerLinear;
     public String path = "", launchPath;
-    public ArrayList<BaseFile> COPY_PATH = null, MOVE_PATH = null;
     public FrameLayout frameLayout;
     public boolean mReturnIntent = false;
     public boolean useGridView, openzip = false;
@@ -195,8 +205,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     public MainActivityHelper mainActivityHelper;
 
     public int operation = -1;
-    public ArrayList<BaseFile> oparrayList;
-    public ArrayList<ArrayList<BaseFile>> oparrayListList;
+    public ArrayList<HybridFileParcelable> oparrayList;
+    public ArrayList<ArrayList<HybridFileParcelable>> oparrayListList;
 
     // oppathe - the path at which certain operation needs to be performed
     // oppathe1 - the new path which user wants to create/modify
@@ -212,11 +222,12 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
     public static final String KEY_PREF_OTG = "uri_usb_otg";
 
+    public static final String PASTEHELPER_BUNDLE = "pasteHelper";
+
     private static final int image_selector_request_code = 31;
 
     private AppBar appbar;
     //private HistoryManager history, grid;
-    private Futils utils;
     private MainActivity mainActivity = this;
     private Context con = this;
     private String zippath;
@@ -230,6 +241,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     private Toast toast = null;
     private ActionBarDrawerToggle mDrawerToggle;
     private Intent intent;
+    private GoogleApiClient mGoogleApiClient;
     private View drawerHeaderLayout;
     private View drawerHeaderView, indicator_layout;
     private RoundedImageView drawerProfilePic;
@@ -264,6 +276,25 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     public static final String TAG_INTENT_FILTER_GENERAL = "general_communications";
     public static final String ARGS_KEY_LOADER = "loader_cloud_args_service";
 
+    /**
+     * Broadcast which will be fired after every file operation, will denote list loading
+     * Registered by {@link MainFragment}
+     */
+    public static final String KEY_INTENT_LOAD_LIST = "loadlist";
+
+    /**
+     * Extras carried by the list loading intent
+     * Contains path of parent directory in which operation took place, so that we can run
+     * media scanner on it
+     */
+    public static final String KEY_INTENT_LOAD_LIST_FILE = "loadlist_file";
+
+    /**
+     * Mime type in intent that apps need to pass when trying to open file manager from a specific directory
+     * Should be clubbed with {@link Intent#ACTION_VIEW} and send in path to open in intent data field
+     */
+    public static final String ARGS_INTENT_ACTION_VIEW_MIME_FOLDER = "resource/folder";
+
     private static final String CLOUD_AUTHENTICATOR_GDRIVE = "android.intent.category.BROWSABLE";
     private static final String CLOUD_AUTHENTICATOR_REDIRECT_URI = "com.amaze.filemanager:/oauth2redirect";
 
@@ -280,6 +311,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
     private static final String KEY_PREFERENCE_BOOKMARKS_ADDED = "books_added";
 
+    private PasteHelper pasteHelper;
+
     /**
      * Called when the activity is first created.
      */
@@ -292,12 +325,9 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         dataUtils.registerOnDataChangedListener(this);
 
         setContentView(R.layout.main_toolbar);
-        appbar = new AppBar(this, sharedPref, new SearchView.SearchListener() {
-            @Override
-            public void onSearch(String queue) {
-                if(!queue.isEmpty()) {
-                    mainActivityHelper.search(queue);
-                }
+        appbar = new AppBar(this, getPrefs(), queue -> {
+            if(!queue.isEmpty()) {
+                mainActivityHelper.search(getPrefs(), queue);
             }
         });
         initialiseViews();
@@ -306,9 +336,18 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         cloudHandler = new CloudHandler(this);
 
         mImageLoader = AppConfig.getInstance().getImageLoader();
-        utils = getFutils();
         mainActivityHelper = new MainActivityHelper(this);
         initialiseFab();
+
+        // initialize g+ api client as per preferences
+        if (getPrefs().getBoolean("plus_pic", false)) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(Plus.API)
+                    .addScope(Plus.SCOPE_PLUS_LOGIN)
+                    .build();
+        }
 
         if (CloudSheetFragment.isCloudProviderAvailable(this)) {
 
@@ -322,7 +361,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         String actionIntent = intent.getAction();
         String typeIntent = intent.getType();
         if (intent.getStringArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS) != null) {
-            ArrayList<BaseFile> failedOps = intent.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
+            ArrayList<HybridFileParcelable> failedOps = intent.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
             if (failedOps != null) {
                 mainActivityHelper.showFailedOperationDialog(failedOps, intent.getBooleanExtra("move", false), this);
             }
@@ -350,8 +389,25 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
                 // zip viewer intent
                 Uri uri = intent.getData();
-                openzip = true;
-                zippath = uri.toString();
+                String type = intent.getType();
+
+                if (type != null && type.equals(ARGS_INTENT_ACTION_VIEW_MIME_FOLDER)) {
+                    // support for syncting or intents from external apps that
+                    // need to start file manager from a specific path
+
+                    if (uri != null) {
+
+                        path = uri.getPath();
+                    } else {
+                        // no data field, open home for the tab in later processing
+                        path = null;
+                    }
+                } else {
+                    // we don't have folder resource mime type set, supposed to be zip/rar
+                    openzip = true;
+                    zippath = uri.toString();
+                }
+
             } else if (actionIntent.equals(Intent.ACTION_SEND) && typeIntent != null) {
                 // save a single file to filesystem
 
@@ -441,16 +497,16 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
 
 
-        if (!sharedPref.getBoolean(KEY_PREFERENCE_BOOKMARKS_ADDED, false)) {
+        if (!getPrefs().getBoolean(KEY_PREFERENCE_BOOKMARKS_ADDED, false)) {
             utilsHandler.addCommonBookmarks();
-            sharedPref.edit().putBoolean(KEY_PREFERENCE_BOOKMARKS_ADDED, true).commit();
+            getPrefs().edit().putBoolean(KEY_PREFERENCE_BOOKMARKS_ADDED, true).commit();
         }
 
         AppConfig.runInBackground(new AppConfig.CustomAsyncCallbacks() {
             @Override
             public <E> E doInBackground() {
 
-                dataUtils.setHiddenfiles(utilsHandler.getHiddenList());
+                dataUtils.setHiddenFiles(utilsHandler.getHiddenFilesConcurrentRadixTree());
                 dataUtils.setGridfiles(utilsHandler.getGridViewList());
                 dataUtils.setListfiles(utilsHandler.getListViewList());
                 dataUtils.setBooks(utilsHandler.getBookmarksList());
@@ -467,7 +523,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 if (savedInstanceState == null) {
                     if (openProcesses) {
                         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-                        transaction.replace(R.id.content_frame, new ProcessViewer(), KEY_INTENT_PROCESS_VIEWER);
+                        transaction.replace(R.id.content_frame, new ProcessViewerFragment(), KEY_INTENT_PROCESS_VIEWER);
                         //transaction.addToBackStack(null);
                         selectedStorage = SELECT_102;
                         openProcesses = false;
@@ -488,13 +544,13 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                         transaction2.commit();
                     } else {
                         if (path != null && path.length() > 0) {
-                            HFile file = new HFile(OpenMode.UNKNOWN, path);
+                            HybridFile file = new HybridFile(OpenMode.UNKNOWN, path);
                             file.generateMode(MainActivity.this);
                             if (file.isDirectory(MainActivity.this))
                                 goToMain(path);
                             else {
                                 goToMain("");
-                                utils.openFile(new File(path), MainActivity.this);
+                                FileUtils.openFile(new File(path), MainActivity.this, getPrefs());
                             }
                         } else {
                             goToMain("");
@@ -502,8 +558,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                         }
                     }
                 } else {
-                    COPY_PATH = savedInstanceState.getParcelableArrayList("COPY_PATH");
-                    MOVE_PATH = savedInstanceState.getParcelableArrayList("MOVE_PATH");
+                    pasteHelper = savedInstanceState.getParcelable(PASTEHELPER_BUNDLE);
                     oppathe = savedInstanceState.getString("oppathe");
                     oppathe1 = savedInstanceState.getString("oppathe1");
                     oparrayList = savedInstanceState.getParcelableArrayList("oparrayList");
@@ -542,27 +597,30 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         Drawable drawable = getResources().getDrawable(R.drawable.ic_file_download_black_24dp);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            VectorDrawable vectorDrawable = (VectorDrawable) drawable;
-            vectorDrawable.setTint(getResources().getColor(android.R.color.white));
 
-            floatingActionButton.getMenuIconView().setImageDrawable(vectorDrawable);
+            if (drawable instanceof VectorDrawable) {
+
+                VectorDrawable vectorDrawable = (VectorDrawable) drawable;
+                vectorDrawable.setTint(getResources().getColor(android.R.color.white));
+
+                floatingActionButton.getMenuIconView().setImageDrawable(vectorDrawable);
+            }
         } else {
 
-            VectorDrawableCompat vectorDrawableCompat = (VectorDrawableCompat) drawable;
-            vectorDrawableCompat.setTint(getResources().getColor(android.R.color.white));
+            if (drawable instanceof VectorDrawableCompat) {
 
-            floatingActionButton.getMenuIconView().setImageDrawable(vectorDrawableCompat);
+                VectorDrawableCompat vectorDrawableCompat = (VectorDrawableCompat) drawable;
+                vectorDrawableCompat.setTint(getResources().getColor(android.R.color.white));
+
+                floatingActionButton.getMenuIconView().setImageDrawable(vectorDrawableCompat);
+            }
         }
 
 
-        floatingActionButton.setOnMenuButtonClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                FileUtil.writeUriToStorage(MainActivity.this, uris, getContentResolver(), getCurrentMainFragment().getCurrentPath());
-                Toast.makeText(MainActivity.this, getResources().getString(R.string.saving), Toast.LENGTH_LONG).show();
-                finish();
-            }
+        floatingActionButton.setOnMenuButtonClickListener(v -> {
+            FileUtil.writeUriToStorage(MainActivity.this, uris, getContentResolver(), getCurrentMainFragment().getCurrentPath());
+            Toast.makeText(MainActivity.this, getResources().getString(R.string.saving), Toast.LENGTH_LONG).show();
+            finish();
         });
     }
 
@@ -658,7 +716,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             String strings[] = FileUtil.getExtSdCardPathsForActivity(this);
             for (String s : strings) {
                 File f = new File(s);
-                if (!rv.contains(s) && Futils.canListFiles(f))
+                if (!rv.contains(s) && FileUtils.canListFiles(f))
                     rv.add(s);
             }
         }
@@ -685,10 +743,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             // in that case the uri will obviously change
             // other wise we could persist the uri even after reopening the app by not writing
             // this preference when it's not null
-            sharedPref.edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
+            getPrefs().edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
             return true;
         } else {
-            sharedPref.edit().putString(KEY_PREF_OTG, null).apply();
+            getPrefs().edit().putString(KEY_PREF_OTG, null).apply();
             return false;
         }
     }
@@ -715,36 +773,36 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             } else {
                 getCurrentMainFragment().goBack();
             }
-        } else if (fragment instanceof ZipViewer) {
-            ZipViewer zipViewer = (ZipViewer) getSupportFragmentManager().findFragmentById(R.id.content_frame);
-            if (zipViewer.mActionMode == null) {
-                if (zipViewer.canGoBack()) {
-                    zipViewer.goBack();
+        } else if (fragment instanceof ZipExplorerFragment) {
+            ZipExplorerFragment zipExplorerFragment = (ZipExplorerFragment)  getFragmentAtFrame();
+            if (zipExplorerFragment.mActionMode == null) {
+                if (zipExplorerFragment.canGoBack()) {
+                    zipExplorerFragment.goBack();
                 } else if (openzip) {
                     openzip = false;
                     finish();
                 } else {
                     FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
                     fragmentTransaction.setCustomAnimations(R.anim.slide_out_bottom, R.anim.slide_out_bottom);
-                    fragmentTransaction.remove(zipViewer);
+                    fragmentTransaction.remove(zipExplorerFragment);
                     fragmentTransaction.commit();
                     supportInvalidateOptionsMenu();
                     floatingActionButton.setVisibility(View.VISIBLE);
                     floatingActionButton.showMenuButton(true);
                 }
             } else {
-                zipViewer.mActionMode.finish();
+                zipExplorerFragment.mActionMode.finish();
             }
         } else if (fragment instanceof FTPServerFragment) {
             //returning back from FTP server
             if (path != null && path.length() > 0) {
-                HFile file = new HFile(OpenMode.UNKNOWN, path);
+                HybridFile file = new HybridFile(OpenMode.UNKNOWN, path);
                 file.generateMode(this);
                 if (file.isDirectory(this))
                     goToMain(path);
                 else {
                     goToMain("");
-                    utils.openFile(new File(path), this);
+                    FileUtils.openFile(new File(path), this, getPrefs());
                 }
             } else {
                 goToMain("");
@@ -755,7 +813,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     }
 
     public void invalidatePasteButton(MenuItem paste) {
-        if (MOVE_PATH != null || COPY_PATH != null) {
+        if (pasteHelper != null) {
             paste.setVisible(true);
         } else {
             paste.setVisible(false);
@@ -771,11 +829,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         } else {
             this.backPressedToExitOnce = true;
             showToast(getString(R.string.pressagain));
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    backPressedToExitOnce = false;
-                }
+            new Handler().postDelayed(() -> {
+                backPressedToExitOnce = false;
             }, 2000);
         }
     }
@@ -875,7 +930,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 adapter.toggleChecked(selectedStorage);
 
                 if (((EntryItem) directoryItems.get(i)).getPath().contains(OTGUtil.PREFIX_OTG) &&
-                        sharedPref.getString(KEY_PREF_OTG, null).equals(VALUE_PREF_OTG_NULL)) {
+                        getPrefs().getString(KEY_PREF_OTG, null).equals(VALUE_PREF_OTG_NULL)) {
                     // we've not gotten otg path yet
                     // start system request for storage access framework
                     Toast.makeText(getApplicationContext(),
@@ -925,16 +980,9 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         MenuItem s = menu.findItem(R.id.view);
         MenuItem search = menu.findItem(R.id.search);
         MenuItem paste = menu.findItem(R.id.paste);
-        String fragmentName;
-        Fragment fragment;
-        try {
-            fragment = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-            fragmentName = fragment.getClass().getName();
-        } catch (Exception e) {
-            return true;
-        }
-        if (fragmentName.contains("TabFragment")) {
-            appbar.setTitle("Amaze");
+        Fragment fragment = getFragmentAtFrame();
+        if (fragment instanceof TabFragment) {
+            appbar.setTitle(R.string.appbar_name);
             if (useGridView) {
                 s.setTitle(getResources().getString(R.string.gridview));
             } else {
@@ -945,7 +993,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 MainFragment ma = getCurrentMainFragment();
                 if (ma.IS_LIST) s.setTitle(R.string.gridview);
                 else s.setTitle(R.string.listview);
-                appbar.getBottomBar().updatePath(ma.getCurrentPath(), ma.results, MainActivityHelper.SEARCH_TEXT, ma.openMode, ma.folder_count, ma.file_count);
+                appbar.getBottomBar().updatePath(ma.getCurrentPath(), ma.results,
+                        MainActivityHelper.SEARCH_TEXT, ma.openMode, ma.folder_count, ma.file_count, ma);
             } catch (Exception e) {}
 
             appbar.getBottomBar().setClickListener();
@@ -963,8 +1012,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             menu.findItem(R.id.extract).setVisible(false);
             invalidatePasteButton(menu.findItem(R.id.paste));
             findViewById(R.id.buttonbarframe).setVisibility(View.VISIBLE);
-        } else if (fragmentName.contains("AppsList") || fragmentName.contains("ProcessViewer") ||
-                fragmentName.contains(FTPServerFragment.class.getName())) {
+        } else if (fragment instanceof AppsListFragment || fragment instanceof ProcessViewerFragment
+                || fragment instanceof FTPServerFragment) {
             appBarLayout.setExpanded(true);
             menu.findItem(R.id.sethome).setVisible(false);
             if (indicator_layout != null) indicator_layout.setVisibility(View.GONE);
@@ -973,15 +1022,17 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             menu.findItem(R.id.home).setVisible(false);
             menu.findItem(R.id.history).setVisible(false);
             menu.findItem(R.id.extract).setVisible(false);
-            if (fragmentName.contains("ProcessViewer")) menu.findItem(R.id.sort).setVisible(false);
-            else {
+            if (fragment instanceof ProcessViewerFragment) {
+                menu.findItem(R.id.sort).setVisible(false);
+            } else {
                 menu.findItem(R.id.dsort).setVisible(false);
                 menu.findItem(R.id.sortby).setVisible(false);
             }
             menu.findItem(R.id.hiddenitems).setVisible(false);
             menu.findItem(R.id.view).setVisible(false);
             menu.findItem(R.id.paste).setVisible(false);
-        } else if (fragmentName.contains("ZipViewer")) {
+        } else if (fragment instanceof ZipExplorerFragment) {
+            appbar.setTitle(R.string.appbar_name);
             menu.findItem(R.id.sethome).setVisible(false);
             if (indicator_layout != null) indicator_layout.setVisibility(View.GONE);
             getAppbar().getBottomBar().resetClickListener();
@@ -1036,7 +1087,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 break;
             case R.id.history:
                 if (ma != null)
-                    GeneralDialogCreation.showHistoryDialog(dataUtils, utils, ma, getAppTheme());
+                    GeneralDialogCreation.showHistoryDialog(dataUtils, getPrefs(), ma, getAppTheme());
                 break;
             case R.id.sethome:
                 if (ma == null) return super.onOptionsItemSelected(item);
@@ -1048,13 +1099,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 final MaterialDialog dialog = GeneralDialogCreation.showBasicDialog(mainActivity,
                         new String[]{getResources().getString(R.string.questionset),
                                 getResources().getString(R.string.setashome), getResources().getString(R.string.yes), getResources().getString(R.string.no), null});
-                dialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        main.home = main.getCurrentPath();
-                        updatePaths(main.no);
-                        dialog.dismiss();
-                    }
+                dialog.getActionButton(DialogAction.POSITIVE).setOnClickListener((v) -> {
+                    main.home = main.getCurrentPath();
+                    updatePaths(main.no);
+                    dialog.dismiss();
                 });
                 dialog.show();
                 break;
@@ -1063,12 +1111,13 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 break;
             case R.id.sort:
                 Fragment fragment = getFragmentAtFrame();
-                if (fragment.getClass().getName().contains("AppsList"))
-                    GeneralDialogCreation.showSortDialog((AppsList) fragment, getAppTheme());
+                if (fragment instanceof AppsListFragment) {
+                    GeneralDialogCreation.showSortDialog((AppsListFragment) fragment, getAppTheme());
+                }
                 break;
             case R.id.sortby:
                 if (ma != null)
-                    GeneralDialogCreation.showSortDialog(ma, getAppTheme(), sharedPref);
+                    GeneralDialogCreation.showSortDialog(ma, getAppTheme(), getPrefs());
                 break;
             case R.id.dsort:
                 if (ma == null) return super.onOptionsItemSelected(item);
@@ -1076,24 +1125,21 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 MaterialDialog.Builder builder = new MaterialDialog.Builder(mainActivity);
                 builder.theme(getAppTheme().getMaterialDialogTheme());
                 builder.title(R.string.directorysort);
-                int current = Integer.parseInt(sharedPref.getString("dirontop", "0"));
+                int current = Integer.parseInt(getPrefs().getString("dirontop", "0"));
 
                 final MainFragment mainFrag = ma;
 
-                builder.items(sort).itemsCallbackSingleChoice(current, new MaterialDialog.ListCallbackSingleChoice() {
-                    @Override
-                    public boolean onSelection(MaterialDialog dialog, View view, int which, CharSequence text) {
-                        sharedPref.edit().putString("dirontop", "" + which).commit();
-                        mainFrag.getSortModes();
-                        mainFrag.updateList();
-                        dialog.dismiss();
-                        return true;
-                    }
+                builder.items(sort).itemsCallbackSingleChoice(current, (dialog1, view, which, text) -> {
+                    getPrefs().edit().putString("dirontop", "" + which).commit();
+                    mainFrag.getSortModes();
+                    mainFrag.updateList();
+                    dialog1.dismiss();
+                    return true;
                 });
                 builder.build().show();
                 break;
             case R.id.hiddenitems:
-                GeneralDialogCreation.showHiddenDialog(dataUtils, utils, ma, getAppTheme());
+                GeneralDialogCreation.showHiddenDialog(dataUtils, getPrefs(), ma, getAppTheme());
                 break;
             case R.id.view:
                 final MainFragment mainFragment = ma;
@@ -1101,20 +1147,14 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                     if (dataUtils.getListfiles().contains(ma.getCurrentPath())) {
                         dataUtils.getListfiles().remove(ma.getCurrentPath());
 
-                        AppConfig.runInBackground(new Runnable() {
-                            @Override
-                            public void run() {
-                                utilsHandler.removeListViewPath(mainFragment.getCurrentPath());
-                            }
+                        AppConfig.runInBackground(() -> {
+                            utilsHandler.removeListViewPath(mainFragment.getCurrentPath());
                         });
                         //grid.removePath(ma.CURRENT_PATH, DataUtils.LIST);
                     }
 
-                    AppConfig.runInBackground(new Runnable() {
-                        @Override
-                        public void run() {
-                            utilsHandler.addGridView(mainFragment.getCurrentPath());
-                        }
+                    AppConfig.runInBackground(() -> {
+                        utilsHandler.addGridView(mainFragment.getCurrentPath());
                     });
                     //grid.addPath(null, ma.CURRENT_PATH, DataUtils.GRID, 0);
                     dataUtils.getGridFiles().add(ma.getCurrentPath());
@@ -1123,19 +1163,13 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                         dataUtils.getGridFiles().remove(ma.getCurrentPath());
                         //grid.removePath(ma.CURRENT_PATH, DataUtils.GRID);
 
-                        AppConfig.runInBackground(new Runnable() {
-                            @Override
-                            public void run() {
-                                utilsHandler.removeGridViewPath(mainFragment.getCurrentPath());
-                            }
+                        AppConfig.runInBackground(() -> {
+                            utilsHandler.removeGridViewPath(mainFragment.getCurrentPath());
                         });
                     }
 
-                    AppConfig.runInBackground(new Runnable() {
-                        @Override
-                        public void run() {
-                            utilsHandler.addListView(mainFragment.getCurrentPath());
-                        }
+                    AppConfig.runInBackground(() -> {
+                        utilsHandler.addListView(mainFragment.getCurrentPath());
                     });
                     //grid.addPath(null, ma.CURRENT_PATH, DataUtils.LIST, 0);
                     dataUtils.getListfiles().add(ma.getCurrentPath());
@@ -1144,18 +1178,18 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 break;
             case R.id.paste:
                 String path = ma.getCurrentPath();
-                ArrayList<BaseFile> arrayList = COPY_PATH != null? COPY_PATH:MOVE_PATH;
-                boolean move = MOVE_PATH != null;
-                new CopyFileCheck(ma, path, move, mainActivity, ThemedActivity.rootMode)
+                ArrayList<HybridFileParcelable> arrayList = new ArrayList<>(Arrays.asList(pasteHelper.paths));
+                boolean move = pasteHelper.operation == PasteHelper.OPERATION_CUT;
+                new PrepareCopyTask(ma, path, move, mainActivity, ThemedActivity.rootMode)
                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, arrayList);
-                COPY_PATH = null;
-                MOVE_PATH = null;
+                pasteHelper = null;
                 invalidatePasteButton(item);
                 break;
             case R.id.extract:
-                Fragment fragment1 = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                if (fragment1.getClass().getName().contains("ZipViewer"))
-                    mainActivityHelper.extractFile(((ZipViewer) fragment1).f);
+                Fragment fragment1 = getFragmentAtFrame();
+                if (fragment1 instanceof ZipExplorerFragment) {
+                    mainActivityHelper.extractFile(((ZipExplorerFragment) fragment1).realZipFile);
+                }
                 break;
             case R.id.search:
                 getAppbar().getSearchView().revealSearchView();
@@ -1195,10 +1229,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         super.onSaveInstanceState(outState);
         if (selectedStorage != NO_VALUE)
             outState.putInt("selectitem", selectedStorage);
-        if (COPY_PATH != null)
-            outState.putParcelableArrayList("COPY_PATH", COPY_PATH);
-        if (MOVE_PATH != null)
-            outState.putParcelableArrayList("MOVE_PATH", MOVE_PATH);
+        if(pasteHelper != null) {
+            outState.putParcelable(PASTEHELPER_BUNDLE, pasteHelper);
+        }
+
         if (oppathe != null) {
             outState.putString("oppathe", oppathe);
             outState.putString("oppathe1", oppathe1);
@@ -1256,10 +1290,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
-                sharedPref.edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
+                getPrefs().edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
                 refreshDrawer();
             } else if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_DETACHED)) {
-                sharedPref.edit().putString(KEY_PREF_OTG, null).apply();
+                getPrefs().edit().putString(KEY_PREF_OTG, null).apply();
                 refreshDrawer();
                 goToMain("");
             }
@@ -1324,9 +1358,9 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         appBarLayout.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.setCustomAnimations(R.anim.slide_in_top, R.anim.slide_in_bottom);
-        Fragment zipFragment = new ZipViewer();
+        Fragment zipFragment = new ZipExplorerFragment();
         Bundle bundle = new Bundle();
-        bundle.putString("path", path);
+        bundle.putString(ZipExplorerFragment.KEY_PATH, path);
         zipFragment.setArguments(bundle);
         fragmentTransaction.add(R.id.content_frame, zipFragment);
         fragmentTransaction.commitAllowingStateLoss();
@@ -1377,7 +1411,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
         return null;
     }
-
+    
     public void refreshDrawer() {
 
         ArrayList<Item> sectionItems = new ArrayList<>();
@@ -1469,7 +1503,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 sectionItems.add(new SectionItem());
         }
 
-        if (sharedPref.getBoolean(PREFERENCE_SHOW_SIDEBAR_FOLDERS, true)) {
+        if (getPrefs().getBoolean(PREFERENCE_SHOW_SIDEBAR_FOLDERS, true)) {
             if (dataUtils.getBooks().size() > 0) {
 
                 Collections.sort(dataUtils.getBooks(), new BookSorter());
@@ -1484,10 +1518,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             }
         }
 
-        Boolean[] quickAccessPref = TinyDB.getBooleanArray(sharedPref, QuickAccessPref.KEY,
+        Boolean[] quickAccessPref = TinyDB.getBooleanArray(getPrefs(), QuickAccessPref.KEY,
                 QuickAccessPref.DEFAULT);
 
-        if (sharedPref.getBoolean(PREFERENCE_SHOW_SIDEBAR_QUICKACCESSES, true)) {
+        if (getPrefs().getBoolean(PREFERENCE_SHOW_SIDEBAR_QUICKACCESSES, true)) {
             if (quickAccessPref[0])
                 sectionItems.add(new EntryItem(getResources().getString(R.string.quick), "5",
                         ContextCompat.getDrawable(this, R.drawable.ic_star_white_18dp)));
@@ -1515,8 +1549,122 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
         dataUtils.setList(sectionItems);
 
-        adapter = new DrawerAdapter(this, this, sectionItems, this, sharedPref);
+        adapter = new DrawerAdapter(this, this, sectionItems, this, getPrefs());
         mDrawerList.setAdapter(adapter);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // check if user enabled g+ api from preferences
+        if (mGoogleApiClient != null)
+            mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected())
+            mGoogleApiClient.disconnect();
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        if (Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
+            Person currentPerson = Plus.PeopleApi.getCurrentPerson(mGoogleApiClient);
+            String accountName = Plus.AccountApi.getAccountName(mGoogleApiClient);
+            Person.Image personImage;
+            Person.Cover.CoverPhoto personCover;
+
+            try {
+                personImage = currentPerson.getImage();
+                personCover = currentPerson.getCover().getCoverPhoto();
+            } catch (Exception e) {
+
+                personCover = null;
+                personImage = null;
+            }
+
+            if (personCover != null && personImage != null) {
+                String imgUrl = personImage.getUrl();
+
+                // getting full size image
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.append(imgUrl);
+                stringBuilder.delete(imgUrl.length() - 6, imgUrl.length());
+                Log.d("G+", stringBuilder.toString());
+                mGoogleName.setText(currentPerson.getDisplayName());
+                mGoogleId.setText(accountName);
+                // setting cover pic
+                mImageLoader.get(personCover.getUrl(), new ImageLoader.ImageListener() {
+                    @Override
+                    public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
+                        drawerHeaderParent.setBackgroundColor(Color.parseColor("#ffffff"));
+                        if (SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                            drawerHeaderView.setBackground(new BitmapDrawable(response.getBitmap()));
+                        } else
+                            drawerHeaderView.setBackgroundDrawable(new BitmapDrawable(response.getBitmap()));
+                    }
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(MainActivity.this, getString(R.string.no_cover_photo),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+
+                // setting profile pic
+                mImageLoader.get(stringBuilder.toString(), new ImageLoader.ImageListener() {
+                    @Override
+                    public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
+                        drawerProfilePic.setImageBitmap(response.getBitmap());
+                        drawerProfilePic.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(MainActivity.this, getString(R.string.no_profile_pic),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+            } else {
+                Toast.makeText(this, getResources().getText(R.string.no_cover_photo), Toast.LENGTH_SHORT).show();
+                drawerHeaderView.setBackgroundResource(R.drawable.amaze_header);
+                drawerHeaderParent.setBackgroundColor(getColorPreference().getColor(ColorUsage.getPrimary(MainActivity.currentTab)));
+            }
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d("G+", "Connection suspended");
+        new Thread(() -> {
+            if (mGoogleApiClient != null)
+                mGoogleApiClient.connect();
+        }).run();
+    }
+
+    public void onConnectionFailed(final ConnectionResult result) {
+        Log.d("G+", "Connection failed" + result.getErrorCode() + result.getErrorCode());
+        if (!mIntentInProgress && result.hasResolution()) {
+            new Thread(() -> {
+                try {
+                    mIntentInProgress = true;
+                    startIntentSenderForResult(result.getResolution().getIntentSender(),
+                            RC_SIGN_IN, null, 0, 0, 0);
+                } catch (IntentSender.SendIntentException e) {
+                    // The intent was canceled before it was sent.  Return to the default
+                    // state and attempt to connect to get an updated ConnectionResult.
+                    mIntentInProgress = false;
+                    if (mGoogleApiClient != null) {
+
+                        mGoogleApiClient.connect();
+                    }
+                }
+            }).run();
+        }
     }
 
     public AppBar getAppbar() {
@@ -1524,13 +1672,23 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     }
 
     protected void onActivityResult(int requestCode, int responseCode, Intent intent) {
+        if (requestCode == RC_SIGN_IN && !mGoogleApiKey && mGoogleApiClient != null) {
+            new Thread(() -> {
+                mIntentInProgress = false;
+                mGoogleApiKey = true;
+                // !mGoogleApiClient.isConnecting
+                if (mGoogleApiClient.isConnecting()) {
+                    mGoogleApiClient.connect();
+                } else
+                    mGoogleApiClient.disconnect();
 
-        if (requestCode == image_selector_request_code) {
-            if (sharedPref != null && intent != null && intent.getData() != null) {
+            }).run();
+        } else if (requestCode == image_selector_request_code) {
+            if (getPrefs() != null && intent != null && intent.getData() != null) {
                 if (SDK_INT >= 19)
                     getContentResolver().takePersistableUriPermission(intent.getData(),
                             Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                sharedPref.edit().putString("drawer_header_path", intent.getData().toString()).commit();
+                getPrefs().edit().putString("drawer_header_path", intent.getData().toString()).commit();
                 setDrawerHeaderBackground();
             }
         } else if (requestCode == 3) {
@@ -1539,7 +1697,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 // Get Uri from Storage Access Framework.
                 treeUri = intent.getData();
                 // Persist URI - this is required for verification of writability.
-                if (treeUri != null) sharedPref.edit().putString("URI", treeUri.toString()).commit();
+                if (treeUri != null) getPrefs().edit().putString("URI", treeUri.toString()).commit();
             } else {
                 // If not confirmed SAF, or if still not writable, then revert settings.
                 /* DialogUtil.displayError(getActivity(), R.string.message_dialog_cannot_write_to_folder_saf, false, currentFolder);
@@ -1601,7 +1759,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                     ma.updateList();
                     break;
                 case DataUtils.NEW_FILE:
-                    mainActivityHelper.mkFile(new HFile(OpenMode.FILE, oppathe), getCurrentMainFragment());
+                    mainActivityHelper.mkFile(new HybridFile(OpenMode.FILE, oppathe), getCurrentMainFragment());
 
                     break;
                 case DataUtils.EXTRACT:
@@ -1613,7 +1771,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             operation = -1;
         } else if (requestCode == REQUEST_CODE_SAF && responseCode == Activity.RESULT_OK) {
             // otg access
-            sharedPref.edit().putString(KEY_PREF_OTG, intent.getData().toString()).apply();
+            getPrefs().edit().putString(KEY_PREF_OTG, intent.getData().toString()).apply();
 
             if (!isDrawerLocked) mDrawerLayout.closeDrawer(mDrawerLinear);
             else onDrawerClosed();
@@ -1624,12 +1782,12 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     }
 
     void initialisePreferences() {
-        hidemode = sharedPref.getInt("hidemode", 0);
-        showHidden = sharedPref.getBoolean("showHidden", false);
-        useGridView = sharedPref.getBoolean("view", true);
-        currentTab = sharedPref.getInt(PreferenceUtils.KEY_CURRENT_TAB, PreferenceUtils.DEFAULT_CURRENT_TAB);
+        hidemode = getPrefs().getInt("hidemode", 0);
+        showHidden = getPrefs().getBoolean("showHidden", false);
+        useGridView = getPrefs().getBoolean("view", true);
+        currentTab = getPrefs().getInt(PreferenceUtils.KEY_CURRENT_TAB, PreferenceUtils.DEFAULT_CURRENT_TAB);
         skinStatusBar = (PreferenceUtils.getStatusColor(getColorPreference().getColorAsString(ColorUsage.getPrimary(MainActivity.currentTab))));
-        colourednavigation = sharedPref.getBoolean("colorednavigation", false);
+        colourednavigation = getPrefs().getBoolean("colorednavigation", false);
     }
 
     void initialiseViews() {
@@ -1642,22 +1800,19 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         drawerHeaderLayout = getLayoutInflater().inflate(R.layout.drawerheader, null);
         drawerHeaderParent = (RelativeLayout) drawerHeaderLayout.findViewById(R.id.drawer_header_parent);
         drawerHeaderView = drawerHeaderLayout.findViewById(R.id.drawer_header);
-        drawerHeaderView.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                Intent intent;
-                if (SDK_INT < 19) {
-                    intent = new Intent();
-                    intent.setAction(Intent.ACTION_GET_CONTENT);
-                } else {
-                    intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        drawerHeaderView.setOnLongClickListener(v -> {
+            Intent intent1;
+            if (SDK_INT < 19) {
+                intent1 = new Intent();
+                intent1.setAction(Intent.ACTION_GET_CONTENT);
+            } else {
+                intent1 = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 
-                }
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("image/*");
-                startActivityForResult(intent, image_selector_request_code);
-                return false;
             }
+            intent1.addCategory(Intent.CATEGORY_OPENABLE);
+            intent1.setType("image/*");
+            startActivityForResult(intent1, image_selector_request_code);
+            return false;
         });
         drawerProfilePic = (RoundedImageView) drawerHeaderLayout.findViewById(R.id.profile_pic);
         mGoogleName = (TextView) drawerHeaderLayout.findViewById(R.id.account_header_drawer_name);
@@ -1691,12 +1846,9 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             fabBgView.setBackgroundResource(R.drawable.fab_shadow_dark);
         }
 
-        fabBgView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                floatingActionButton.close(true);
-                if (getAppbar().getSearchView().isEnabled()) getAppbar().getSearchView().hideSearchView();
-            }
+        fabBgView.setOnClickListener(view -> {
+            floatingActionButton.close(true);
+            if (getAppbar().getSearchView().isEnabled()) getAppbar().getSearchView().hideSearchView();
         });
 
         ImageView divider = (ImageView) findViewById(R.id.divider1);
@@ -1712,14 +1864,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             ((ImageView) settingsButton.findViewById(R.id.settingicon)).setImageResource(R.drawable.ic_settings_white_48dp);
             ((TextView) settingsButton.findViewById(R.id.settingtext)).setTextColor(Utils.getColor(this, android.R.color.white));
         }
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent in = new Intent(MainActivity.this, PreferencesActivity.class);
-                startActivity(in);
-                finish();
-            }
-
+        settingsButton.setOnClickListener(v -> {
+            Intent in = new Intent(MainActivity.this, PreferencesActivity.class);
+            startActivity(in);
+            finish();
         });
         View appButton = findViewById(R.id.appbutton);
         if (getAppTheme().equals(AppTheme.DARK)) {
@@ -1727,18 +1875,15 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             ((ImageView) appButton.findViewById(R.id.appicon)).setImageResource(R.drawable.ic_doc_apk_white);
             ((TextView) appButton.findViewById(R.id.apptext)).setTextColor(Utils.getColor(this, android.R.color.white));
         }
-        appButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.support.v4.app.FragmentTransaction transaction2 = getSupportFragmentManager().beginTransaction();
-                transaction2.replace(R.id.content_frame, new AppsList());
-                appBarLayout.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
-                pending_fragmentTransaction = transaction2;
-                if (!isDrawerLocked) mDrawerLayout.closeDrawer(mDrawerLinear);
-                else onDrawerClosed();
-                selectedStorage = SELECT_MINUS_2;
-                adapter.toggleChecked(false);
-            }
+        appButton.setOnClickListener(v -> {
+            FragmentTransaction transaction2 = getSupportFragmentManager().beginTransaction();
+            transaction2.replace(R.id.content_frame, new AppsListFragment());
+            appBarLayout.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
+            pending_fragmentTransaction = transaction2;
+            if (!isDrawerLocked) mDrawerLayout.closeDrawer(mDrawerLinear);
+            else onDrawerClosed();
+            selectedStorage = SELECT_MINUS_2;
+            adapter.toggleChecked(false);
         });
 
         View ftpButton = findViewById(R.id.ftpbutton);
@@ -1747,19 +1892,15 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             ((ImageView) ftpButton.findViewById(R.id.ftpicon)).setImageResource(R.drawable.ic_ftp_dark);
             ((TextView) ftpButton.findViewById(R.id.ftptext)).setTextColor(Utils.getColor(this, android.R.color.white));
         }
-        ftpButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                android.support.v4.app.FragmentTransaction transaction2 = getSupportFragmentManager().beginTransaction();
-                transaction2.replace(R.id.content_frame, new FTPServerFragment());
-                appBarLayout.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
-                pending_fragmentTransaction = transaction2;
-                if (!isDrawerLocked) mDrawerLayout.closeDrawer(mDrawerLinear);
-                else onDrawerClosed();
-                selectedStorage = SELECT_MINUS_2;
-                adapter.toggleChecked(false);
-            }
+        ftpButton.setOnClickListener(v -> {
+            FragmentTransaction transaction2 = getSupportFragmentManager().beginTransaction();
+            transaction2.replace(R.id.content_frame, new FTPServerFragment());
+            appBarLayout.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
+            pending_fragmentTransaction = transaction2;
+            if (!isDrawerLocked) mDrawerLayout.closeDrawer(mDrawerLinear);
+            else onDrawerClosed();
+            selectedStorage = SELECT_MINUS_2;
+            adapter.toggleChecked(false);
         });
         //getSupportActionBar().setBackgroundDrawable(new ColorDrawable(Color.parseColor((currentTab==1 ? skinTwo : skin))));
 
@@ -1821,47 +1962,34 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         floatingActionButton.setMenuButtonColorNormal(colorAccent);
         floatingActionButton.setMenuButtonColorPressed(colorAccent);
 
-        floatingActionButton.setOnMenuToggleListener(new FloatingActionMenu.OnMenuToggleListener() {
-            @Override
-            public void onMenuToggle(boolean b) {
-                if (b) utils.revealShow(fabBgView, true);
-                else utils.revealShow(fabBgView, false);
-            }
+        floatingActionButton.setOnMenuToggleListener(b -> {
+            if (b) FileUtils.revealShow(fabBgView, true);
+            else FileUtils.revealShow(fabBgView, false);
         });
 
         FloatingActionButton fabNewFolder = (FloatingActionButton) findViewById(R.id.menu_new_folder);
         fabNewFolder.setColorNormal(iconSkin);
         fabNewFolder.setColorPressed(iconSkin);
-        fabNewFolder.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                mainActivityHelper.add(MainActivityHelper.NEW_FOLDER);
-                //utils.revealShow(fabBgView, false);
-                floatingActionButton.close(true);
-            }
+        fabNewFolder.setOnClickListener(view -> {
+            mainActivityHelper.add(MainActivityHelper.NEW_FOLDER);
+            //utils.revealShow(fabBgView, false);
+            floatingActionButton.close(true);
         });
         FloatingActionButton fabNewFile = (FloatingActionButton) findViewById(R.id.menu_new_file);
         fabNewFile.setColorNormal(iconSkin);
         fabNewFile.setColorPressed(iconSkin);
-        fabNewFile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mainActivityHelper.add(MainActivityHelper.NEW_FILE);
-                //utils.revealShow(fabBgView, false);
-                floatingActionButton.close(true);
-            }
+        fabNewFile.setOnClickListener(view -> {
+            mainActivityHelper.add(MainActivityHelper.NEW_FILE);
+            //utils.revealShow(fabBgView, false);
+            floatingActionButton.close(true);
         });
         final FloatingActionButton floatingActionButton3 = (FloatingActionButton) findViewById(R.id.menu_new_cloud);
         floatingActionButton3.setColorNormal(iconSkin);
         floatingActionButton3.setColorPressed(iconSkin);
-        floatingActionButton3.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mainActivityHelper.add(MainActivityHelper.NEW_CLOUD);
-                //utils.revealShow(fabBgView, false);
-                floatingActionButton.close(true);
-            }
+        floatingActionButton3.setOnClickListener(view -> {
+            mainActivityHelper.add(MainActivityHelper.NEW_CLOUD);
+            //utils.revealShow(fabBgView, false);
+            floatingActionButton.close(true);
         });
     }
 
@@ -1904,10 +2032,10 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         }
 
         if (pendingPath != null) {
-            HFile hFile = new HFile(OpenMode.UNKNOWN, pendingPath);
+            HybridFile hFile = new HybridFile(OpenMode.UNKNOWN, pendingPath);
             hFile.generateMode(this);
             if (hFile.isSimpleFile()) {
-                utils.openFile(new File(pendingPath), mainActivity);
+                FileUtils.openFile(new File(pendingPath), mainActivity, getPrefs());
                 pendingPath = null;
                 return;
             }
@@ -1924,6 +2052,14 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         supportInvalidateOptionsMenu();
     }
 
+    public PasteHelper getPaste() {
+        return pasteHelper;
+    }
+
+    public void setPaste(PasteHelper p) {
+        pasteHelper = p;
+        supportInvalidateOptionsMenu();
+    }
 
     @Override
     public void onNewIntent(Intent i) {
@@ -1936,9 +2072,9 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 if (ma != null) {
                     ma.loadlist(path, false, OpenMode.FILE);
                 } else goToMain(path);
-            } else utils.openFile(new File(path), mainActivity);
+            } else FileUtils.openFile(new File(path), mainActivity, getPrefs());
         } else if (i.getStringArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS) != null) {
-            ArrayList<BaseFile> failedOps = i.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
+            ArrayList<HybridFileParcelable> failedOps = i.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
             if (failedOps != null) {
                 mainActivityHelper.showFailedOperationDialog(failedOps, i.getBooleanExtra("move", false), this);
             }
@@ -1949,7 +2085,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
         } else if ((openProcesses = i.getBooleanExtra(KEY_INTENT_PROCESS_VIEWER, false))) {
             FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-            transaction.replace(R.id.content_frame, new ProcessViewer(), KEY_INTENT_PROCESS_VIEWER);
+            transaction.replace(R.id.content_frame, new ProcessViewerFragment(), KEY_INTENT_PROCESS_VIEWER);
             //   transaction.addToBackStack(null);
             selectedStorage = SELECT_102;
             openProcesses = false;
@@ -1976,12 +2112,12 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
 
             if (SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
-                    if (sharedPref.getString(KEY_PREF_OTG, null) == null) {
-                        sharedPref.edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
+                    if (getPrefs().getString(KEY_PREF_OTG, null) == null) {
+                        getPrefs().edit().putString(KEY_PREF_OTG, VALUE_PREF_OTG_NULL).apply();
                         refreshDrawer();
                     }
                 } else if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_DETACHED)) {
-                    sharedPref.edit().putString(KEY_PREF_OTG, null).apply();
+                    getPrefs().edit().putString(KEY_PREF_OTG, null).apply();
                     refreshDrawer();
                 }
             }
@@ -1989,27 +2125,25 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     }
 
     void setDrawerHeaderBackground() {
-        new Thread(new Runnable() {
-            public void run() {
-                if (sharedPref.getBoolean("plus_pic", false)) return;
-                String path = sharedPref.getString("drawer_header_path", null);
-                if (path == null) return;
-                try {
-                    final ImageView headerImageView = new ImageView(MainActivity.this);
-                    headerImageView.setImageDrawable(drawerHeaderParent.getBackground());
-                    mImageLoader.get(path, new ImageLoader.ImageListener() {
-                        @Override
-                        public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
-                            headerImageView.setImageBitmap(response.getBitmap());
-                            drawerHeaderView.setBackgroundResource(R.drawable.amaze_header_2);
-                        }
+        new Thread(() -> {
+            if (getPrefs().getBoolean("plus_pic", false)) return;
+            String path1 = getPrefs().getString("drawer_header_path", null);
+            if (path1 == null) return;
+            try {
+                final ImageView headerImageView = new ImageView(MainActivity.this);
+                headerImageView.setImageDrawable(drawerHeaderParent.getBackground());
+                mImageLoader.get(path1, new ImageLoader.ImageListener() {
+                    @Override
+                    public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
+                        headerImageView.setImageBitmap(response.getBitmap());
+                        drawerHeaderView.setBackgroundResource(R.drawable.amaze_header_2);
+                    }
 
-                        @Override
-                        public void onErrorResponse(VolleyError error) {}
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                    @Override
+                    public void onErrorResponse(VolleyError error) {}
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }).run();
     }
@@ -2018,7 +2152,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         @Override
         public void onReceive(Context context, Intent i) {
             if (i.getStringArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS) != null) {
-                ArrayList<BaseFile> failedOps = i.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
+                ArrayList<HybridFileParcelable> failedOps = i.getParcelableArrayListExtra(TAG_INTENT_FILTER_FAILED_OPS);
                 if (failedOps != null) {
                     mainActivityHelper.showFailedOperationDialog(failedOps, i.getBooleanExtra("move", false), mainActivity);
                 }
@@ -2034,7 +2168,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 refreshDrawer();
                 TabFragment tabFragment = getTabFragment();
-                boolean b = sharedPref.getBoolean("needtosethome", true);
+                boolean b = getPrefs().getBoolean("needtosethome", true);
                 //reset home and current paths according to new storages
                 if (b) {
                     tabHandler.clear();
@@ -2055,7 +2189,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                         if (main1 != null)
                             ((MainFragment) main1).updateTabWithDb(tabHandler.findTab(2));
                     }
-                    sharedPref.edit().putBoolean("needtosethome", false).commit();
+                    getPrefs().edit().putBoolean("needtosethome", false).commit();
                 } else {
                     //just refresh list
                     if (tabFragment != null) {
@@ -2094,11 +2228,11 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
      * It covers the fragment.
      */
     public void showSmokeScreen() {
-        Futils.revealShow(fabBgView, true);
+        FileUtils.revealShow(fabBgView, true);
     }
 
     public void hideSmokeScreen() {
-        Futils.revealShow(fabBgView, false);
+        FileUtils.revealShow(fabBgView, false);
     }
 
     @Override
@@ -2111,11 +2245,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
                 dataUtils.addServer(s);
                 refreshDrawer();
 
-                AppConfig.runInBackground(new Runnable() {
-                    @Override
-                    public void run() {
-                        utilsHandler.addSmb(name, encryptedPath);
-                    }
+                AppConfig.runInBackground(() -> {
+                    utilsHandler.addSmb(name, encryptedPath);
                 });
                 //grid.addPath(name, encryptedPath, DataUtils.SMB, 1);
                 MainFragment ma = getCurrentMainFragment();
@@ -2128,11 +2259,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
             if (i != -1) {
                 dataUtils.removeServer(i);
 
-                AppConfig.runInBackground(new Runnable() {
-                    @Override
-                    public void run() {
-                        utilsHandler.renameSMB(oldname, oldPath, name, path);
-                    }
+                AppConfig.runInBackground(() -> {
+                    utilsHandler.renameSMB(oldname, oldPath, name, path);
                 });
                 //mainActivity.grid.removePath(oldname, oldPath, DataUtils.SMB);
             }
@@ -2150,11 +2278,8 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         if (i != -1) {
             dataUtils.removeServer(i);
 
-            AppConfig.runInBackground(new Runnable() {
-                @Override
-                public void run() {
-                    utilsHandler.removeSmbPath(name, path);
-                }
+            AppConfig.runInBackground(() -> {
+                utilsHandler.removeSmbPath(name, path);
             });
             //grid.removePath(name, path, DataUtils.SMB);
             refreshDrawer();
@@ -2222,7 +2347,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
     }
 
     @Override
-    public void onProgressUpdate(BaseFile val , String query) {
+    public void onProgressUpdate(HybridFileParcelable val , String query) {
         mainFragment.addSearchResult(val,query);
     }
 
@@ -2269,13 +2394,7 @@ public class MainActivity extends ThemedActivity implements OnRequestPermissions
         cloudHandler.clear(service);
         dataUtils.removeAccount(service);
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-
-                refreshDrawer();
-            }
-        });
+        runOnUiThread(this::refreshDrawer);
     }
 
     @Override
