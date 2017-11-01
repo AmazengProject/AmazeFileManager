@@ -116,6 +116,7 @@
   <string name="in_safe">Yetersiz alan</string>
   <string name="no_file_overwrite">Dosya üzerine yazılamıyor</string>
   <string name="keep_both">İki dosyayı da tut (seçilmezse üzerine yazılacaktır)</string>
+  <string name="keep_both_copy">Kopya</string>
   <string name="skip">Geç</string>
   <string name="overwrite">Yapıştır</string>
     <string name="not_allowed">İzin yok</string>

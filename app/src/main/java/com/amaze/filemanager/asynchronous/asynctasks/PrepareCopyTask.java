@@ -168,6 +168,7 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
 
     private void showDialog(final String path, final ArrayList<HybridFileParcelable> filesToCopy,
                             final ArrayList<HybridFileParcelable> conflictingFiles) {
+        keepBoth = false;
         int accentColor = mainActivity.getColorPreference().getColor(ColorUsage.ACCENT);
         final MaterialDialog.Builder dialogBuilder = new MaterialDialog.Builder(context);
         LayoutInflater layoutInflater =
@@ -176,7 +177,7 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
         dialogBuilder.customView(view, true);
         // textView
         TextView textView = (TextView) view.findViewById(R.id.textView);
-        textView.setText(context.getResources().getString(R.string.fileexist) + "\n" + conflictingFiles.get(counter).getName());
+        textView.setText(context.getResources().getString(R.string.fileexist) + "\n" + conflictingFiles.get(counter).getPath());
 
         // checkBox
         final CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
@@ -199,8 +200,6 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
         dialogBuilder.onNegative((dialog, which) -> {
             if (checkBoxKeep.isChecked())
                 keepBoth = true;
-            else
-                keepBoth = false;
 
             if (checkBox.isChecked())
                 dialogState = DO_FOR_ALL_ELEMENTS.REPLACE;
@@ -271,22 +270,21 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
             }
         }
 
-        if (keepBoth) {
-            for (int i = 0; i < conflictingFiles.size(); i++) {
+        if ((keepBoth) && (conflictingFiles.get(counter-1) != null)) { // keep both files with renaming the new ones
+            for (int i = 0; i < counter; i++) {
                 String fileName = conflictingFiles.get(i).getName();
                 String fileNameWithoutExtension = fileName;
                 String extension = "";
 
-                if (fileName.contains(".")) {
+                if (fileName.contains(".")) { // incase file doesn't have an extension
                     fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
                     extension = fileName.substring(fileName.lastIndexOf('.'), fileName.length());
                 }
 
-                conflictingFiles.get(i).setName(fileNameWithoutExtension + " - Copy (1)" + extension);
                 HybridFileParcelable file = new HybridFileParcelable(path + "/" + conflictingFiles.get(i).getName());
                 int k = 1;
-                while (file.exists()){
-                    conflictingFiles.get(i).setName(fileNameWithoutExtension + " - Copy (" + (k++) + ")" + extension);
+                while (file.exists()) { // rename it until it doesn't conflict with older files
+                    conflictingFiles.get(i).setName(fileNameWithoutExtension + " - " + context.getResources().getString(R.string.keep_both_copy) + " (" + (k++) + ")" + extension);
                     file = new HybridFileParcelable(path + "/" + conflictingFiles.get(i).getName());
                 }
             }
