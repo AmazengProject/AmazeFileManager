@@ -67,6 +67,7 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
     private final ArrayList<String> paths = new ArrayList<>();
     private final ArrayList<ArrayList<HybridFileParcelable>> filesToCopyPerFolder = new ArrayList<>();
     private ArrayList<HybridFileParcelable> filesToCopy;    // a copy of params sent to this
+    private boolean keepBoth = false;
 
     public PrepareCopyTask(MainFragment ma, String path, Boolean move, MainActivity con, boolean rootMode) {
         mainFrag = ma;
@@ -179,6 +180,8 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
 
         // checkBox
         final CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
+		// keep both checkBox
+        final CheckBox checkBoxKeep = (CheckBox) view.findViewById(R.id.checkBoxKeep);
         Utils.setTint(context, checkBox, accentColor);
         dialogBuilder.theme(mainActivity.getAppTheme().getMaterialDialogTheme());
         dialogBuilder.title(context.getResources().getString(R.string.paste));
@@ -194,17 +197,23 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
             doNotReplaceFiles(path, filesToCopy, conflictingFiles);
         });
         dialogBuilder.onNegative((dialog, which) -> {
+            if (checkBoxKeep.isChecked())
+                keepBoth = true;
+            else
+                keepBoth = false;
+
             if (checkBox.isChecked())
                 dialogState = DO_FOR_ALL_ELEMENTS.REPLACE;
+
             replaceFiles(path, filesToCopy, conflictingFiles);
         });
 
         final MaterialDialog dialog = dialogBuilder.build();
         dialog.show();
-        if (filesToCopy.get(0).getParent().equals(path)) {
+        /*if (filesToCopy.get(0).getParent().equals(path)) {
             View negative = dialog.getActionButton(DialogAction.NEGATIVE);
             negative.setEnabled(false);
-        }
+        }*/
     }
 
     private void onEndDialog(String path, ArrayList<HybridFileParcelable> filesToCopy,
@@ -262,6 +271,26 @@ public class PrepareCopyTask extends AsyncTask<ArrayList<HybridFileParcelable>, 
             }
         }
 
+        if (keepBoth) {
+            for (int i = 0; i < conflictingFiles.size(); i++) {
+                String fileName = conflictingFiles.get(i).getName();
+                String fileNameWithoutExtension = fileName;
+                String extension = "";
+
+                if (fileName.contains(".")) {
+                    fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+                    extension = fileName.substring(fileName.lastIndexOf('.'), fileName.length());
+                }
+
+                conflictingFiles.get(i).setName(fileNameWithoutExtension + " - Copy (1)" + extension);
+                HybridFileParcelable file = new HybridFileParcelable(path + "/" + conflictingFiles.get(i).getName());
+                int k = 1;
+                while (file.exists()){
+                    conflictingFiles.get(i).setName(fileNameWithoutExtension + " - Copy (" + (k++) + ")" + extension);
+                    file = new HybridFileParcelable(path + "/" + conflictingFiles.get(i).getName());
+                }
+            }
+        }
         onEndDialog(path, filesToCopy, conflictingFiles);
     }
 
