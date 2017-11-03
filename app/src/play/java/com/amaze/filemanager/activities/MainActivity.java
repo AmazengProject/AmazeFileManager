@@ -83,6 +83,7 @@ import android.widget.Toast;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
+import com.amaze.filemanager.activities.TextEditorActivity;
 import com.amaze.filemanager.activities.superclasses.ThemedActivity;
 import com.amaze.filemanager.adapters.DrawerAdapter;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
@@ -181,9 +182,7 @@ public class MainActivity extends ThemedActivity implements
 
     /* Request code used to invoke sign in user interactions. */
     static final int RC_SIGN_IN = 0;
-
     private DataUtils dataUtils = DataUtils.getInstance();
-
     public DrawerLayout mDrawerLayout;
     public ListView mDrawerList;
     public ScrimInsetsRelativeLayout mDrawerLinear;
@@ -1760,7 +1759,7 @@ public class MainActivity extends ThemedActivity implements
                     break;
                 case DataUtils.NEW_FILE:
                     mainActivityHelper.mkFile(new HybridFile(OpenMode.FILE, oppathe), getCurrentMainFragment());
-
+                    //degistireceğim yer11++xml dosyasayı değiştirilecek
                     break;
                 case DataUtils.EXTRACT:
                     mainActivityHelper.extractFile(new File(oppathe));
