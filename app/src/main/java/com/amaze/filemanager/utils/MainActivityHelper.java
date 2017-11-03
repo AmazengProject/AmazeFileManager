@@ -171,6 +171,10 @@ public class MainActivityHelper {
                         CloudSheetFragment.TAG_FRAGMENT);
                 break;
         }
+
+	//changeScrollPosition() method of MainFragment class will be used ....
+        //MainFragment ma2 = (MainFragment) ((TabFragment) mainActivity.getSupportFragmentManager().findFragmentById(R.id.content_frame)).getCurrentTabFragment();
+        //changeScrollPosition()   This is not working for now, it will be handled in next commit @HasimD
     }
 
     public String getIntegralNames(String path) {
