@@ -1271,6 +1271,19 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
         scrolls.put(CURRENT_PATH, b);
     }
 
+
+   public void changeScrollPosition() { //added method by HasimD
+        if (scrolls.containsKey(CURRENT_PATH)) {
+            Bundle b = scrolls.get(CURRENT_PATH);
+
+            if (IS_LIST)
+                mLayoutManager.scrollToPosition(15);
+            else
+                mLayoutManagerGrid.scrollToPosition(15);
+        }
+    }
+
+
     public void goBack() {
         if (openMode == OpenMode.CUSTOM) {
             loadlist(home, false, OpenMode.FILE);
