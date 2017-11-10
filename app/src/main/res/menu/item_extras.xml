@@ -49,4 +49,7 @@
     <item
         android:id="@+id/book"
         android:title="@string/addtobook" />
+    <item
+        android:id="@+id/addtoquickaccess"
+        android:title="@string/addtoquickaccess" />
 </menu>
