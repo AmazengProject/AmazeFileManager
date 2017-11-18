@@ -1082,10 +1082,8 @@ public class MainActivity extends ThemedActivity implements
 
         switch (item.getItemId()) {
             case R.id.home:
-                if (ma != null) {
+                if (ma != null)
                     ma.home();
-                    Toast.makeText(getApplicationContext(), getCurrentMainFragment().getLayoutElementSize()+"", Toast.LENGTH_SHORT).show();
-                }
                 break;
             case R.id.history:
                 if (ma != null)
