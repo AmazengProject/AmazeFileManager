@@ -7,6 +7,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.provider.DocumentFile;
 
 import com.amaze.filemanager.exceptions.RootNotPermittedException;
+import com.amaze.filemanager.fragments.MainFragment;
+import com.amaze.filemanager.ui.views.FastScroller;
 import com.amaze.filemanager.utils.DataUtils;
 import com.amaze.filemanager.utils.cloud.CloudUtil;
 import com.amaze.filemanager.utils.Logger;
