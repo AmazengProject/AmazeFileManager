@@ -1548,7 +1548,6 @@ public class MainActivity extends ThemedActivity implements
         }
 
         dataUtils.setList(sectionItems);
-
         adapter = new DrawerAdapter(this, this, sectionItems, this, getPrefs());
         mDrawerList.setAdapter(adapter);
     }
@@ -2303,6 +2302,18 @@ public class MainActivity extends ThemedActivity implements
     public void onHistoryAdded(String path) {
 
         utilsHandler.addHistory(path);
+    }
+
+    @Override
+    public void onQuickAccessAdded(String path) {
+
+        utilsHandler.addQuickAccess(path);
+    }
+
+    @Override
+    public void onQuickAccessRemoved(String path) {
+
+        utilsHandler.removeQuickAccessPath(path);
     }
 
     @Override

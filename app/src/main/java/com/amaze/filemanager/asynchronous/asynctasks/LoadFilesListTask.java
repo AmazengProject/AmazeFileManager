@@ -142,7 +142,7 @@ public class LoadFilesListTask extends AsyncTask<Void, Void, Pair<OpenMode, Arra
                         list = listApks();
                         break;
                     case 5:
-                        list = listRecent();
+                        list = listQuickAccess();
                         break;
                     case 6:
                         list = listRecentFiles();
@@ -388,6 +388,29 @@ public class LoadFilesListTask extends AsyncTask<Void, Void, Pair<OpenMode, Arra
             }
         }
         return songs;
+    }
+
+    private ArrayList<LayoutElementParcelable> listQuickAccess() {
+        UtilsHandler utilsHandler = new UtilsHandler(c);
+        final ArrayList<String> paths = utilsHandler.getQuickAccessList();
+        ArrayList<LayoutElementParcelable> files = new ArrayList<>();
+        if (paths != null) {
+            for (String f : paths) {
+                if (!f.equals("/")) {
+                    HybridFileParcelable hybridFileParcelable = RootHelper.generateBaseFile(new File(f), ma.SHOW_HIDDEN);
+                    if (hybridFileParcelable != null) {
+                        hybridFileParcelable.generateMode(ma.getActivity());
+                        if (!hybridFileParcelable.isSmb() && !hybridFileParcelable.isDirectory() && hybridFileParcelable.exists()) {
+                            LayoutElementParcelable parcelable = createListParcelables(hybridFileParcelable);
+                            if (parcelable != null){
+                                files.add(parcelable); }
+                                parcelable.setInQuickAccess(true);
+                        }
+                    }
+                }
+            }
+        }
+        return files;
     }
 
     private ArrayList<LayoutElementParcelable> listRecentFiles() {

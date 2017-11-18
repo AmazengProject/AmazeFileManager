@@ -81,6 +81,7 @@ public class LayoutElementParcelable implements Parcelable {
     private String symlink;
     private String size;
     private boolean isDirectory;
+    private boolean isInQuickAccess = false;
     private long date = 0,longSize=0;
     private String date1 = "";
     private boolean header;
@@ -145,6 +146,14 @@ public class LayoutElementParcelable implements Parcelable {
 
     public boolean isDirectory() {
         return isDirectory;
+    }
+
+    public boolean isInQuickAccess() {
+        return isInQuickAccess;
+    }
+
+    public void setInQuickAccess(boolean state) {
+        this.isInQuickAccess = state;
     }
 
     public HybridFileParcelable generateBaseFile() {

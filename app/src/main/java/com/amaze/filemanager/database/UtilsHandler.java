@@ -39,6 +39,7 @@ public class UtilsHandler extends SQLiteOpenHelper {
     private static final String TABLE_GRID = "grid";
     private static final String TABLE_BOOKMARKS = "bookmarks";
     private static final String TABLE_SMB = "smb";
+    private static final String TABLE_QUICKACCESS = "quickaccess";
 
     private static final String COLUMN_ID = "_id";
     private static final String COLUMN_PATH = "path";
@@ -77,6 +78,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
                 + COLUMN_NAME + " TEXT,"
                 + COLUMN_PATH + " TEXT"
                 + ")";
+        String queryQuickAccess = "CREATE TABLE IF NOT EXISTS " + TABLE_QUICKACCESS + " ("
+                + COLUMN_ID + " INTEGER PRIMARY KEY,"
+                + COLUMN_PATH + " TEXT"
+                + ")";
 
         db.execSQL(queryHistory);
         db.execSQL(queryHidden);
@@ -84,6 +89,7 @@ public class UtilsHandler extends SQLiteOpenHelper {
         db.execSQL(queryGrid);
         db.execSQL(queryBookmarks);
         db.execSQL(querySmb);
+        db.execSQL(queryQuickAccess);
     }
 
     @Override
@@ -94,6 +100,7 @@ public class UtilsHandler extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_GRID);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_BOOKMARKS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_SMB);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUICKACCESS);
 
         onCreate(db);
     }
@@ -104,7 +111,8 @@ public class UtilsHandler extends SQLiteOpenHelper {
         LIST,
         GRID,
         BOOKMARKS,
-        SMB
+        SMB,
+        QUICKACCESS
     }
 
     public void addCommonBookmarks() {
@@ -146,6 +154,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
 
     public void addSmb(String name, String path) {
         setPath(Operation.SMB, name, path);
+    }
+
+    public void addQuickAccess(String path) {
+        setPath(Operation.QUICKACCESS, path);
     }
 
     public ArrayList<String> getHistoryList() {
@@ -230,6 +242,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
         return row;
     }
 
+    public ArrayList<String> getQuickAccessList() {
+        return getPath(Operation.QUICKACCESS);
+    }
+
     public void removeHistoryPath(String path) {
         removePath(Operation.HISTORY, path);
     }
@@ -281,6 +297,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
         }
     }
 
+    public void removeQuickAccessPath(String path) {
+        removePath(Operation.QUICKACCESS, path);
+    }
+
     public void clearHistoryTable() {
         clearTable(Operation.HISTORY);
     }
@@ -305,6 +325,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
         clearTable(Operation.SMB);
     }
 
+    public void clearQuickAccessTable() {
+        clearTable(Operation.QUICKACCESS);
+    }
+
     public void renameBookmark(String oldName, String oldPath, String newName, String newPath) {
         renamePath(Operation.BOOKMARKS, oldName, oldPath, newName, newPath);
     }
@@ -315,9 +339,15 @@ public class UtilsHandler extends SQLiteOpenHelper {
 
     private void setPath(Operation operation, String path) {
         SQLiteDatabase sqLiteDatabase = getWritableDatabase();
+        if (operation == Operation.QUICKACCESS){
+            if (getPath(Operation.QUICKACCESS).contains(path)) {
+                Toast.makeText(context, R.string.quickaccessalert, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            else Toast.makeText(context, R.string.quickaccessaddsuccess, Toast.LENGTH_SHORT).show();
+        }
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_PATH, path);
-
         sqLiteDatabase.insert(getTableForOperation(operation), null, contentValues);
     }
 
@@ -338,6 +368,8 @@ public class UtilsHandler extends SQLiteOpenHelper {
         cursor.moveToFirst();
 
         switch (operation) {
+            case QUICKACCESS:
+                cursor.moveToPrevious();
             case HISTORY:
             case LIST:
             case GRID:
@@ -362,6 +394,10 @@ public class UtilsHandler extends SQLiteOpenHelper {
 
         sqLiteDatabase.delete(getTableForOperation(operation), COLUMN_PATH + "=?",
                 new String[] {path});
+
+        if (operation == Operation.QUICKACCESS){
+            Toast.makeText(context, R.string.quickaccessremovesuccess, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void clearTable(Operation operation) {
@@ -414,6 +450,8 @@ public class UtilsHandler extends SQLiteOpenHelper {
                 return TABLE_BOOKMARKS;
             case SMB:
                 return TABLE_SMB;
+            case QUICKACCESS:
+                return TABLE_QUICKACCESS;
             default:
                 return null;
         }

@@ -17,7 +17,6 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
-
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.adapters.holders.EmptyViewHolder;
 import com.amaze.filemanager.adapters.holders.ItemViewHolder;
@@ -728,6 +727,7 @@ public class RecyclerAdapter extends RecyclerArrayAdapter<String, RecyclerView.V
             if (rowItem.isDirectory()) {
                 popupMenu.getMenu().findItem(R.id.open_with).setVisible(false);
                 popupMenu.getMenu().findItem(R.id.share).setVisible(false);
+                popupMenu.getMenu().findItem(R.id.addtoquickaccess).setVisible(false);
 
                 if (mainFrag.getMainActivity().mReturnIntent) {
                     popupMenu.getMenu().findItem(R.id.return_select).setVisible(true);
@@ -745,6 +745,11 @@ public class RecyclerAdapter extends RecyclerArrayAdapter<String, RecyclerView.V
                 if (description.endsWith(CryptUtil.CRYPT_EXTENSION))
                     popupMenu.getMenu().findItem(R.id.decrypt).setVisible(true);
                 else popupMenu.getMenu().findItem(R.id.encrypt).setVisible(true);
+            }
+
+            if (rowItem.isInQuickAccess()) {
+                popupMenu.getMenu().findItem(R.id.addtoquickaccess).setVisible(false);
+                popupMenu.getMenu().findItem(R.id.removefromquickaccess).setVisible(true);
             }
 
             popupMenu.show();

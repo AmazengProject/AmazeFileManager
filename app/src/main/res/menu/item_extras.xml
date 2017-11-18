@@ -52,4 +52,8 @@
     <item
         android:id="@+id/addtoquickaccess"
         android:title="@string/addtoquickaccess" />
+    <item
+        android:id="@+id/removefromquickaccess"
+        android:title="@string/removefromquickaccess"
+        android:visible="false" />
 </menu>

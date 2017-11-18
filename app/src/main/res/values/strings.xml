@@ -274,6 +274,10 @@
     <string name="wanthelp"><u>Need help?</u></string>
     <string name="quick">Quick access</string>
     <string name="addtoquickaccess">Add to Quick Access</string>
+    <string name="removefromquickaccess">Remove from Quick Access</string>
+    <string name="quickaccessalert">This file is already in Quick Access!</string>
+    <string name="quickaccessaddsuccess">Added to Quick Access successfully</string>
+    <string name="quickaccessremovesuccess">Removed from Quick Access successfully</string>
     <string name="recent">Recent files</string>
     <string name="edit">Edit</string>
     <string name="find">Find in page</string>
