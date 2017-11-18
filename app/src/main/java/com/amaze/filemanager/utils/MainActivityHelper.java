@@ -15,6 +15,8 @@ import android.support.design.widget.BottomSheetDialogFragment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -148,6 +150,7 @@ public class MainActivityHelper {
 
         materialDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(v -> l.onClick(materialDialog));
         materialDialog.show();
+
     }
 
     private interface OnClickMaterialListener {
@@ -291,6 +294,7 @@ public class MainActivityHelper {
                                 newEntry.setPassword(oldEntry.getPassword());
                                 newEntry.setPath(newPath);
                                 cryptHandler.updateEntry(oldEntry, newEntry);
+
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 // couldn't change the entry, leave it alone
@@ -411,6 +415,8 @@ public class MainActivityHelper {
                 ma.getActivity().runOnUiThread(() -> {
                     if (b) {
                         ma.updateList();
+                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//
+
                     } else {
                         Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
                                 Toast.LENGTH_SHORT).show();
@@ -468,6 +474,7 @@ public class MainActivityHelper {
                 ma.getActivity().runOnUiThread(() -> {
                     if (b) {
                         ma.updateList();
+
                     } else {
                         Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
                                 Toast.LENGTH_SHORT).show();

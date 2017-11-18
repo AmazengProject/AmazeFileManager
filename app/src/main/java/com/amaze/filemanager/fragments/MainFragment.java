@@ -43,6 +43,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.FileObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.design.widget.AppBarLayout;
 import android.support.v4.app.FragmentActivity;
@@ -1272,16 +1274,28 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
     }
 
 
-   public void changeScrollPosition() { //added method by HasimD
-        if (scrolls.containsKey(CURRENT_PATH)) {
-            Bundle b = scrolls.get(CURRENT_PATH);
+   public void changeScrollPosition(String a) { //added method by HasimD
 
-            if (IS_LIST)
-                mLayoutManager.scrollToPosition(15);
-            else
-                mLayoutManagerGrid.scrollToPosition(15);
-        }
-    }
+       new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+           @Override
+           public void run() {
+               int x=0;
+               for(int i =0;i<getLayoutElementSize();i++){
+                   if(LIST_ELEMENTS.get(i).getTitle().equals(a)) {
+                       x=i;
+                       break;
+                   }
+               }
+               LinearLayoutManager llm = (LinearLayoutManager) listView.getLayoutManager();
+               llm.scrollToPositionWithOffset(x, 500);
+           }
+       }, 250);
+
+
+
+
+   }
+
 
 
     public void goBack() {
