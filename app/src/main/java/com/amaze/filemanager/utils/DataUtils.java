@@ -1,5 +1,6 @@
 package com.amaze.filemanager.utils;
 
+
 import com.amaze.filemanager.ui.drawer.Item;
 import com.amaze.filemanager.utils.application.AppConfig;
 import com.cloudrail.si.interfaces.CloudStorage;
@@ -29,11 +30,10 @@ public class DataUtils {
 
     private ConcurrentRadixTree<VoidValue> hiddenfiles = new ConcurrentRadixTree<>(new DefaultCharArrayNodeFactory());
     private ArrayList<String> gridfiles = new ArrayList<>(),
-            listfiles = new ArrayList<>(), history = new ArrayList<>(), storages = new ArrayList<>();
+            listfiles = new ArrayList<>(), history = new ArrayList<>(), storages = new ArrayList<>(), quickaccess = new ArrayList<>();
 
     private ArrayList<Item> list = new ArrayList<>();
     private ArrayList<String[]> servers = new ArrayList<>(), books = new ArrayList<>();
-
     private ArrayList<CloudStorage> accounts = new ArrayList<>(4);
 
     private DataChangeListener dataChangeListener;
@@ -117,6 +117,7 @@ public class DataUtils {
         servers = new ArrayList<>();
         books = new ArrayList<>();
         accounts = new ArrayList<>();
+        quickaccess = new ArrayList<>();
     }
 
     public void registerOnDataChangedListener(DataChangeListener l) {
@@ -246,6 +247,10 @@ public class DataUtils {
         return history;
     }
 
+    public ArrayList<String> getQuickAccess() {
+        return quickaccess;
+    }
+
     public void addHistoryFile(final String i) {
 
         synchronized (history) {
@@ -254,6 +259,28 @@ public class DataUtils {
         }
         if (dataChangeListener != null) {
             AppConfig.runInBackground(() -> dataChangeListener.onHistoryAdded(i));
+        }
+    }
+
+    public void addQuickAccessFile(final String i) {
+
+        synchronized (quickaccess) {
+
+            quickaccess.add(i);
+        }
+        if (dataChangeListener != null) {
+            AppConfig.runInBackground(() -> dataChangeListener.onQuickAccessAdded(i));
+        }
+    }
+
+    public void removeQuickAccessFile(final String i) {
+
+        synchronized (quickaccess) {
+
+            quickaccess.remove(i);
+        }
+        if (dataChangeListener != null) {
+            AppConfig.runInBackground(() -> dataChangeListener.onQuickAccessRemoved(i));
         }
     }
 
@@ -386,6 +413,10 @@ public class DataUtils {
         void onBookAdded(String path[], boolean refreshdrawer);
 
         void onHistoryCleared();
+
+        void onQuickAccessAdded(String path);
+
+        void onQuickAccessRemoved(String path);
     }
 
 }

@@ -203,6 +203,16 @@ public class ItemPopupMenu extends PopupMenu implements PopupMenu.OnMenuItemClic
             case R.id.return_select:
                 mainFragment.returnIntentResults(rowItem.generateBaseFile());
                 return true;
+            case R.id.addtoquickaccess:
+                rowItem.setInQuickAccess(true);
+                DataUtils dataUtils2 = DataUtils.getInstance();
+                dataUtils2.addQuickAccessFile(rowItem.getDesc());
+                return true;
+            case R.id.removefromquickaccess:
+                DataUtils dataUtils3 = DataUtils.getInstance();
+                dataUtils3.removeQuickAccessFile(rowItem.getDesc());
+                rowItem.setInQuickAccess(false);
+                return true;
         }
         return false;
     }
