@@ -26,6 +26,12 @@
         app:showAsAction="ifRoom|withText"
         android:visible="false" />
     <item
+        android:id="@+id/cancel_action"
+        android:title="@string/cancel"
+        android:icon="@drawable/ic_action_cancel"
+        app:showAsAction="ifRoom|withText"
+        android:visible="false" />
+    <item
         android:id="@+id/search"
         android:title="@string/search"
         android:icon="@drawable/ic_search_white_24dp"
