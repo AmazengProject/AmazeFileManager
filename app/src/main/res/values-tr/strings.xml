@@ -57,6 +57,7 @@
   <string name="copying">Kopyalanıyor</string>
   <string name="moving">Taşınıyor</string>
     <string name="file">Dosya</string>
+  <string name="improved_file">Gelistirilmis Dosya</string>
   <string name="folder">Klasör</string>
   <string name="newfolder">Yeni klasör</string>
   <string name="entername">Ad gir</string>
