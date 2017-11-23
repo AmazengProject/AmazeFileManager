@@ -175,10 +175,7 @@ public class MainActivityHelper {
                 break;
         }
 
-	//changeScrollPosition() method of MainFragment class will be used ....
-        //MainFragment ma2 = (MainFragment) ((TabFragment) mainActivity.getSupportFragmentManager().findFragmentById(R.id.content_frame)).getCurrentTabFragment();
-        //changeScrollPosition()   This is not working for now, it will be handled in next commit @HasimD
-    }
+	}
 
     public String getIntegralNames(String path) {
         String newPath = "";
@@ -300,6 +297,9 @@ public class MainActivityHelper {
                                 // couldn't change the entry, leave it alone
                             }
                         }
+
+
+                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//byHasimD
                     } else
                         Toast.makeText(context, context.getString(R.string.operationunsuccesful),
                                 Toast.LENGTH_SHORT).show();
@@ -415,7 +415,7 @@ public class MainActivityHelper {
                 ma.getActivity().runOnUiThread(() -> {
                     if (b) {
                         ma.updateList();
-                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//
+                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//byHasimD
 
                     } else {
                         Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
@@ -474,7 +474,7 @@ public class MainActivityHelper {
                 ma.getActivity().runOnUiThread(() -> {
                     if (b) {
                         ma.updateList();
-
+                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//byHasimD
                     } else {
                         Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
                                 Toast.LENGTH_SHORT).show();

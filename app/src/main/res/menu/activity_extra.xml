@@ -21,10 +21,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/paste"
-        android:title="@string/paste"
         android:icon="@drawable/ic_content_paste_white_24dp"
-        app:showAsAction="ifRoom|withText"
-        android:visible="false" />
+        android:title="@string/paste"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/cancel_action"
+        android:icon="@drawable/ic_action_cancel"
+        android:title="@string/cancel"
+        android:visible="false"
+        app:showAsAction="always" />
     <item
         android:id="@+id/search"
         android:title="@string/search"
