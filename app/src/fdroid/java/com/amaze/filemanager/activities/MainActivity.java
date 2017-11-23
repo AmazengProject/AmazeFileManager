@@ -312,7 +312,8 @@ public class MainActivity extends ThemedActivity implements
     private static final String KEY_PREFERENCE_BOOKMARKS_ADDED = "books_added";
 
     private PasteHelper pasteHelper;
-
+    private MenuItem paste;
+    private MenuItem cancel;
     /**
      * Called when the activity is first created.
      */
@@ -812,20 +813,20 @@ public class MainActivity extends ThemedActivity implements
         }
     }
 
-    public void invalidatePasteButton(MenuItem paste) {
+    public void invalidatePasteButton() {
         if (pasteHelper != null) {
             paste.setVisible(true);
         } else {
             paste.setVisible(false);
         }
     }
-  /*  public void invalidateCancelPasteButton(MenuItem cancelPaste) {//by HasimD
+    public void invalidateCancelPasteButton() {//by HasimD
         if (pasteHelper != null) {
-            cancelPaste.setVisible(true);
+            cancel.setVisible(true);
         } else {
-            cancelPaste.setVisible(false);
+            cancel.setVisible(false);
         }
-    }*/
+    }
 
 
     public void exit() {
@@ -987,8 +988,8 @@ public class MainActivity extends ThemedActivity implements
     public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem s = menu.findItem(R.id.view);
         MenuItem search = menu.findItem(R.id.search);
-        MenuItem paste = menu.findItem(R.id.paste);
-       // MenuItem cancel = menu.findItem(R.id.cancel_action);
+        paste = menu.findItem(R.id.paste);
+        cancel = menu.findItem(R.id.cancel_action);
         Fragment fragment = getFragmentAtFrame();
         if (fragment instanceof TabFragment) {
             appbar.setTitle(R.string.appbar_name);
@@ -1008,8 +1009,8 @@ public class MainActivity extends ThemedActivity implements
 
             appbar.getBottomBar().setClickListener();
 
-           // invalidateCancelPasteButton(cancel);  //by HasimD
-            invalidatePasteButton(paste);
+            invalidateCancelPasteButton();  //by HasimD
+            invalidatePasteButton();
             search.setVisible(true);
             if (indicator_layout != null) indicator_layout.setVisibility(View.VISIBLE);
             menu.findItem(R.id.search).setVisible(true);
@@ -1020,8 +1021,9 @@ public class MainActivity extends ThemedActivity implements
             if (showHidden) menu.findItem(R.id.hiddenitems).setVisible(true);
             menu.findItem(R.id.view).setVisible(true);
             menu.findItem(R.id.extract).setVisible(false);
-            invalidatePasteButton(menu.findItem(R.id.paste));
-          //  invalidateCancelPasteButton(menu.findItem(R.id.cancel_action)); by HasimD
+            //invalidatePasteButton(menu.findItem(R.id.paste));
+            invalidatePasteButton();//
+            invalidateCancelPasteButton(); //by HasimD
             findViewById(R.id.buttonbarframe).setVisibility(View.VISIBLE);
         } else if (fragment instanceof AppsListFragment || fragment instanceof ProcessViewerFragment
                 || fragment instanceof FTPServerFragment) {
@@ -1055,7 +1057,7 @@ public class MainActivity extends ThemedActivity implements
             menu.findItem(R.id.hiddenitems).setVisible(false);
             menu.findItem(R.id.view).setVisible(false);
             menu.findItem(R.id.paste).setVisible(false);
-            //menu.findItem(R.id.cancel_action).setVisible(false); byHasimD
+            menu.findItem(R.id.cancel_action).setVisible(false); //byHasimD
             menu.findItem(R.id.extract).setVisible(true);
         }
         return super.onPrepareOptionsMenu(menu);
@@ -1196,12 +1198,14 @@ public class MainActivity extends ThemedActivity implements
                 new PrepareCopyTask(ma, path, move, mainActivity, ThemedActivity.rootMode)
                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, arrayList);
                 pasteHelper = null;
-                invalidatePasteButton(item);
+                invalidatePasteButton();
+                invalidateCancelPasteButton();
                 break;
-           /* case R.id.cancel_action:
+            case R.id.cancel_action:
                 pasteHelper = null;
-                invalidatePasteButton(item);
-                break;*/
+                invalidatePasteButton();
+                invalidateCancelPasteButton();
+                break;
             case R.id.extract:
                 Fragment fragment1 = getFragmentAtFrame();
                 if (fragment1 instanceof ZipExplorerFragment) {

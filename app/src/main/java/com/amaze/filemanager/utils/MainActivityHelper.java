@@ -300,6 +300,9 @@ public class MainActivityHelper {
                                 // couldn't change the entry, leave it alone
                             }
                         }
+
+
+
                     } else
                         Toast.makeText(context, context.getString(R.string.operationunsuccesful),
                                 Toast.LENGTH_SHORT).show();
