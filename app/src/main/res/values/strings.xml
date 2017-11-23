@@ -61,6 +61,7 @@
     <string name="copying">Copying</string>
     <string name="moving">Moving</string>
     <string name="file">File</string>
+    <string name="improved_file">Improved file</string>
     <string name="folder">Folder</string>
     <string name="newfolder">New Folder</string>
     <string name="entername">Enter Name</string>

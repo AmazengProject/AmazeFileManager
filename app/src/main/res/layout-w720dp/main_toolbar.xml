@@ -132,6 +132,14 @@
                 fab:fab_label="@string/file" />
 
             <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/menu_new_improved_file"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_insert_drive_file_white_48dp"
+                fab:fab_size="mini"
+                fab:fab_label="@string/improved_file" />
+
+            <com.github.clans.fab.FloatingActionButton
                 android:id="@+id/menu_new_cloud"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
