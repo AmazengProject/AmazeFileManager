@@ -83,7 +83,6 @@ import android.widget.Toast;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
-import com.amaze.filemanager.activities.TextEditorActivity;
 import com.amaze.filemanager.activities.superclasses.ThemedActivity;
 import com.amaze.filemanager.adapters.DrawerAdapter;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
@@ -182,7 +181,9 @@ public class MainActivity extends ThemedActivity implements
 
     /* Request code used to invoke sign in user interactions. */
     static final int RC_SIGN_IN = 0;
+
     private DataUtils dataUtils = DataUtils.getInstance();
+
     public DrawerLayout mDrawerLayout;
     public ListView mDrawerList;
     public ScrimInsetsRelativeLayout mDrawerLinear;
@@ -311,7 +312,8 @@ public class MainActivity extends ThemedActivity implements
     private static final String KEY_PREFERENCE_BOOKMARKS_ADDED = "books_added";
 
     private PasteHelper pasteHelper;
-
+    private MenuItem paste;
+    private MenuItem cancel;
     /**
      * Called when the activity is first created.
      */
@@ -811,13 +813,21 @@ public class MainActivity extends ThemedActivity implements
         }
     }
 
-    public void invalidatePasteButton(MenuItem paste) {
+    public void invalidatePasteButton() {
         if (pasteHelper != null) {
             paste.setVisible(true);
         } else {
             paste.setVisible(false);
         }
     }
+    public void invalidateCancelPasteButton() {//by HasimD
+        if (pasteHelper != null) {
+            cancel.setVisible(true);
+        } else {
+            cancel.setVisible(false);
+        }
+    }
+
 
     public void exit() {
         if (backPressedToExitOnce) {
@@ -978,7 +988,8 @@ public class MainActivity extends ThemedActivity implements
     public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem s = menu.findItem(R.id.view);
         MenuItem search = menu.findItem(R.id.search);
-        MenuItem paste = menu.findItem(R.id.paste);
+        paste = menu.findItem(R.id.paste);
+        cancel = menu.findItem(R.id.cancel_action);
         Fragment fragment = getFragmentAtFrame();
         if (fragment instanceof TabFragment) {
             appbar.setTitle(R.string.appbar_name);
@@ -998,7 +1009,8 @@ public class MainActivity extends ThemedActivity implements
 
             appbar.getBottomBar().setClickListener();
 
-            invalidatePasteButton(paste);
+            invalidateCancelPasteButton();  //by HasimD
+            invalidatePasteButton();
             search.setVisible(true);
             if (indicator_layout != null) indicator_layout.setVisibility(View.VISIBLE);
             menu.findItem(R.id.search).setVisible(true);
@@ -1009,7 +1021,9 @@ public class MainActivity extends ThemedActivity implements
             if (showHidden) menu.findItem(R.id.hiddenitems).setVisible(true);
             menu.findItem(R.id.view).setVisible(true);
             menu.findItem(R.id.extract).setVisible(false);
-            invalidatePasteButton(menu.findItem(R.id.paste));
+            //invalidatePasteButton(menu.findItem(R.id.paste));
+            invalidatePasteButton();//
+            invalidateCancelPasteButton(); //by HasimD
             findViewById(R.id.buttonbarframe).setVisibility(View.VISIBLE);
         } else if (fragment instanceof AppsListFragment || fragment instanceof ProcessViewerFragment
                 || fragment instanceof FTPServerFragment) {
@@ -1030,6 +1044,7 @@ public class MainActivity extends ThemedActivity implements
             menu.findItem(R.id.hiddenitems).setVisible(false);
             menu.findItem(R.id.view).setVisible(false);
             menu.findItem(R.id.paste).setVisible(false);
+            menu.findItem(R.id.cancel_action).setVisible(false);
         } else if (fragment instanceof ZipExplorerFragment) {
             appbar.setTitle(R.string.appbar_name);
             menu.findItem(R.id.sethome).setVisible(false);
@@ -1042,6 +1057,7 @@ public class MainActivity extends ThemedActivity implements
             menu.findItem(R.id.hiddenitems).setVisible(false);
             menu.findItem(R.id.view).setVisible(false);
             menu.findItem(R.id.paste).setVisible(false);
+            menu.findItem(R.id.cancel_action).setVisible(false); //byHasimD
             menu.findItem(R.id.extract).setVisible(true);
         }
         return super.onPrepareOptionsMenu(menu);
@@ -1182,7 +1198,13 @@ public class MainActivity extends ThemedActivity implements
                 new PrepareCopyTask(ma, path, move, mainActivity, ThemedActivity.rootMode)
                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, arrayList);
                 pasteHelper = null;
-                invalidatePasteButton(item);
+                invalidatePasteButton();
+                invalidateCancelPasteButton();
+                break;
+            case R.id.cancel_action:
+                pasteHelper = null;
+                invalidatePasteButton();
+                invalidateCancelPasteButton();
                 break;
             case R.id.extract:
                 Fragment fragment1 = getFragmentAtFrame();
@@ -1547,7 +1569,6 @@ public class MainActivity extends ThemedActivity implements
         }
 
         dataUtils.setList(sectionItems);
-
         adapter = new DrawerAdapter(this, this, sectionItems, this, getPrefs());
         mDrawerList.setAdapter(adapter);
     }
@@ -1759,7 +1780,7 @@ public class MainActivity extends ThemedActivity implements
                     break;
                 case DataUtils.NEW_FILE:
                     mainActivityHelper.mkFile(new HybridFile(OpenMode.FILE, oppathe), getCurrentMainFragment());
-                    //degistireceğim yer11++xml dosyasayı değiştirilecek
+
                     break;
                 case DataUtils.EXTRACT:
                     mainActivityHelper.extractFile(new File(oppathe));
@@ -2302,6 +2323,18 @@ public class MainActivity extends ThemedActivity implements
     public void onHistoryAdded(String path) {
 
         utilsHandler.addHistory(path);
+    }
+
+    @Override
+    public void onQuickAccessAdded(String path) {
+
+        utilsHandler.addQuickAccess(path);
+    }
+
+    @Override
+    public void onQuickAccessRemoved(String path) {
+
+        utilsHandler.removeQuickAccessPath(path);
     }
 
     @Override
