@@ -55,7 +55,7 @@ import java.util.ArrayList;
  */
 public class MainActivityHelper {
 
-    public static final int NEW_FOLDER = 0, NEW_FILE = 1, NEW_SMB = 2, NEW_CLOUD = 3;
+    public static final int NEW_FOLDER = 0, NEW_FILE = 1, NEW_SMB = 2, NEW_CLOUD = 3 , NEw_IMPROVED_FILE =4;
 
     private MainActivity mainActivity;
     private DataUtils dataUtils = DataUtils.getInstance();
@@ -138,6 +138,13 @@ public class MainActivityHelper {
             materialDialog.dismiss();
         });
     }
+    void mkimpfile(final OpenMode openMode, final String path, final MainFragment ma) {
+        mk(R.string.improved_file, materialDialog -> {
+            String a = materialDialog.getInputEditText().getText().toString();
+            mkimpFile(new HybridFile(openMode, path + "/" + a), ma);
+            materialDialog.dismiss();
+        });
+    }
 
     private void mk(@StringRes int newText, final OnClickMaterialListener l) {
         final MaterialDialog materialDialog = GeneralDialogCreation.showNameDialog(mainActivity,
@@ -167,6 +174,9 @@ public class MainActivityHelper {
                 break;
             case NEW_FILE:
                 mkfile(ma.openMode, path, ma);
+                break;
+            case NEw_IMPROVED_FILE:
+                mkimpfile(ma.openMode, path, ma);
                 break;
             case NEW_CLOUD:
                 BottomSheetDialogFragment fragment = new CloudSheetFragment();
@@ -434,7 +444,66 @@ public class MainActivityHelper {
             }
         });
     }
+    public void mkimpFile(final HybridFile path, final MainFragment ma) {
+        final Toast toast = Toast.makeText(ma.getActivity(), ma.getString(R.string.creatingimpfile),
+                Toast.LENGTH_SHORT);
+        toast.show();
+        Operations.mkimpfile(path, ma.getActivity(), ThemedActivity.rootMode, new Operations.ErrorCallBack() {
+            @Override
+            public void exists(final HybridFile file) {
+                ma.getActivity().runOnUiThread(() -> {
+                    if (toast != null) toast.cancel();
+                    Toast.makeText(mainActivity, mainActivity.getString(R.string.fileexist),
+                            Toast.LENGTH_SHORT).show();
+                    if (ma != null && ma.getActivity() != null) {
+                        // retry with dialog prompted again
+                        mkimpfile(file.getMode(), file.getParent(), ma);
+                    }
 
+                });
+            }
+
+            @Override
+            public void launchSAF(HybridFile file) {
+
+                ma.getActivity().runOnUiThread(() -> {
+                    if (toast != null) toast.cancel();
+                    mainActivity.oppathe = path.getPath();
+                    mainActivity.operation = DataUtils.IMPROVED_NEW_FİLE;
+                    guideDialogForLEXA(mainActivity.oppathe);
+                });
+
+            }
+
+            @Override
+            public void launchSAF(HybridFile file, HybridFile file1) {
+
+            }
+
+            @Override
+            public void done(HybridFile hFile, final boolean b) {
+                ma.getActivity().runOnUiThread(() -> {
+                    if (b) {
+                        ma.updateList();
+                        mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//byHasimD
+
+                    } else {
+                        Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void invalidName(final HybridFile file) {
+                ma.getActivity().runOnUiThread(() -> {
+                    if (toast != null) toast.cancel();
+                    Toast.makeText(ma.getActivity(), ma.getString(R.string.invalid_name)
+                            + ": " + file.getName(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
     public void mkDir(final HybridFile path, final MainFragment ma) {
         final Toast toast = Toast.makeText(ma.getActivity(), ma.getString(R.string.creatingfolder),
                 Toast.LENGTH_SHORT);

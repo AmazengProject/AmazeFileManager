@@ -289,6 +289,7 @@
     <string name="grantgplus">App needs permission for this feature. Canceling this dialog will uncheck this feature.</string>
     <string name="operationunsuccesful">Operation Unsuccessful</string>
     <string name="creatingfile">Creating File</string>
+    <string name="creatingimpfile">Creating Improved File</string>
     <string name="creatingfolder">Creating Folder</string>
     <string name="renaming">Renaming</string>
     <string name="cantbeempty">%s cannot be empty</string>

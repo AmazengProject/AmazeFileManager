@@ -200,7 +200,7 @@ public class Operations {
 
     public static void mkfile(@NonNull final HybridFile file, final Context context, final boolean rootMode,
                               @NonNull final ErrorCallBack errorCallBack) {
-        ///degistireceğim yer222
+
         new AsyncTask<Void, Void, Void>() {
 
             private DataUtils dataUtils = DataUtils.getInstance();
@@ -323,7 +323,131 @@ public class Operations {
             }
         }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
+    public static void mkimpfile(@NonNull final HybridFile file, final Context context, final boolean rootMode,
+                              @NonNull final ErrorCallBack errorCallBack) {
 
+        new AsyncTask<Void, Void, Void>() {
+
+            private DataUtils dataUtils = DataUtils.getInstance();
+
+            @Override
+            protected Void doInBackground(Void... params) {
+                // check whether filename is valid or not
+                if (!Operations.isFileNameValid(file.getName(context))) {
+                    errorCallBack.invalidName(file);
+                    return null;
+                }
+
+                if (file.exists()) {
+                    errorCallBack.exists(file);
+                    return null;
+                }
+                if (file.isSmb()) {
+                    try {
+                        file.getSmbFile(2000).createNewFile();
+                    } catch (SmbException e) {
+                        Logger.log(e, file.getPath(), context);
+                        errorCallBack.done(file, false);
+                        return null;
+                    }
+                    errorCallBack.done(file, file.exists());
+                    return null;
+                } else if (file.isDropBoxFile()) {
+                    CloudStorage cloudStorageDropbox = dataUtils.getAccount(OpenMode.DROPBOX);
+                    try {
+                        byte[] tempBytes = new byte[0];
+                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
+                        cloudStorageDropbox.upload(CloudUtil.stripPath(OpenMode.DROPBOX, file.getPath()),
+                                byteArrayInputStream, 0l, true);
+                        errorCallBack.done(file, true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        errorCallBack.done(file, false);
+                    }
+                } else if (file.isBoxFile()) {
+                    CloudStorage cloudStorageBox = dataUtils.getAccount(OpenMode.BOX);
+                    try {
+                        byte[] tempBytes = new byte[0];
+                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
+                        cloudStorageBox.upload(CloudUtil.stripPath(OpenMode.BOX, file.getPath()),
+                                byteArrayInputStream, 0l, true);
+                        errorCallBack.done(file, true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        errorCallBack.done(file, false);
+                    }
+                } else if (file.isOneDriveFile()) {
+                    CloudStorage cloudStorageOneDrive = dataUtils.getAccount(OpenMode.ONEDRIVE);
+                    try {
+                        byte[] tempBytes = new byte[0];
+                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
+                        cloudStorageOneDrive.upload(CloudUtil.stripPath(OpenMode.ONEDRIVE, file.getPath()),
+                                byteArrayInputStream, 0l, true);
+                        errorCallBack.done(file, true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        errorCallBack.done(file, false);
+                    }
+                } else if (file.isGoogleDriveFile()) {
+                    CloudStorage cloudStorageGdrive = dataUtils.getAccount(OpenMode.GDRIVE);
+                    try {
+                        byte[] tempBytes = new byte[0];
+                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
+                        cloudStorageGdrive.upload(CloudUtil.stripPath(OpenMode.GDRIVE, file.getPath()),
+                                byteArrayInputStream, 0l, true);
+                        errorCallBack.done(file, true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        errorCallBack.done(file, false);
+                    }
+                } else if (file.isOtgFile()) {
+
+                    // first check whether new file already exists
+                    DocumentFile fileToCreate = OTGUtil.getDocumentFile(file.getPath(), context, false);
+                    if (fileToCreate != null) errorCallBack.exists(file);
+
+                    DocumentFile parentDirectory = OTGUtil.getDocumentFile(file.getParent(), context, false);
+                    if (parentDirectory.isDirectory()) {
+                        parentDirectory.createFile(file.getName(context).substring(file.getName().lastIndexOf(".")),
+                                file.getName(context));
+                        errorCallBack.done(file, true);
+                    } else errorCallBack.done(file, false);
+                    return null;
+                } else {
+                    if (file.isLocal() || file.isRoot()) {
+                        int mode = checkFolder(new File(file.getParent()), context);
+                        if (mode == 2) {
+                            errorCallBack.launchSAF(file);
+                            return null;
+                        }
+                        if (mode == 1 || mode == 0)
+                            try {
+                                FileUtil.mkfile(file.getFile(), context);
+                            } catch (IOException e) {
+                            }
+                        if (!file.exists() && rootMode) {
+                            file.setMode(OpenMode.ROOT);
+                            if (file.exists()) errorCallBack.exists(file);
+                            try {
+
+                                RootUtils.mkFile(file.getPath());
+                            } catch (RootNotPermittedException e) {
+                                Logger.log(e, file.getPath(), context);
+                            }
+                            errorCallBack.done(file, file.exists());
+                            return null;
+                        }
+                        errorCallBack.done(file, file.exists());
+                        return null;
+                    }
+                    errorCallBack.done(file, file.exists());
+
+
+                }
+                return null;
+            }
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
     public static void rename(final HybridFile oldFile, final HybridFile newFile, final boolean rootMode,
                               final Context context, final ErrorCallBack errorCallBack) {
 

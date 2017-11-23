@@ -2003,6 +2003,14 @@ public class MainActivity extends ThemedActivity implements
             //utils.revealShow(fabBgView, false);
             floatingActionButton.close(true);
         });
+        FloatingActionButton fabNewImprovedFile = (FloatingActionButton) findViewById(R.id.menu_new_improved_file);
+        fabNewImprovedFile.setColorNormal(iconSkin);
+        fabNewImprovedFile.setColorPressed(iconSkin);
+        fabNewImprovedFile.setOnClickListener(view -> {
+            mainActivityHelper.add(MainActivityHelper.NEw_IMPROVED_FILE);
+            //utils.revealShow(fabBgView, false);
+            floatingActionButton.close(true);
+        });
         final FloatingActionButton floatingActionButton3 = (FloatingActionButton) findViewById(R.id.menu_new_cloud);
         floatingActionButton3.setColorNormal(iconSkin);
         floatingActionButton3.setColorPressed(iconSkin);
