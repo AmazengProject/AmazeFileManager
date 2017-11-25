@@ -550,6 +550,24 @@ public class FileUtils {
             e.printStackTrace();
         }
     }
+    public static void openWith1(final File f, final Context c, final boolean useNewStack) {
+
+            Uri uri = fileToContentUri(c, f);
+            if (uri == null) uri = Uri.fromFile(f);
+            Intent intent = new Intent();
+            intent.setAction(Intent.ACTION_VIEW);
+
+            if(useNewStack) applyNewDocFlag(intent);
+            intent.setDataAndType(uri, "text/*");
+
+            try {
+                c.startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(c, R.string.noappfound, Toast.LENGTH_SHORT).show();
+                openWith(f, c, useNewStack);
+            }
+
+    }
 
     public static void openWith(final DocumentFile f, final Context c, final boolean useNewStack) {
         MaterialDialog.Builder a = new MaterialDialog.Builder(c);

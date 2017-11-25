@@ -539,6 +539,10 @@ public class TextEditorActivity extends ThemedActivity implements TextWatcher, V
         }
         return super.onOptionsItemSelected(item);
     }
+    public void opImp(String path , Context context){
+        boolean useNewStack = getPrefs().getBoolean(PrefFrag.PREFERENCE_TEXTEDITOR_NEWSTACK, false);
+        FileUtils.openunknown(new File(path), context, false, useNewStack);
+    }
 
     @Override
     protected void onDestroy() {

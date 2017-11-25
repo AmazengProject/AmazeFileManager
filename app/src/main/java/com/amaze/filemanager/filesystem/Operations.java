@@ -338,69 +338,7 @@ public class Operations {
                     return null;
                 }
 
-                if (file.exists()) {
-                    errorCallBack.exists(file);
-                    return null;
-                }
-                if (file.isSmb()) {
-                    try {
-                        file.getSmbFile(2000).createNewFile();
-                    } catch (SmbException e) {
-                        Logger.log(e, file.getPath(), context);
-                        errorCallBack.done(file, false);
-                        return null;
-                    }
-                    errorCallBack.done(file, file.exists());
-                    return null;
-                } else if (file.isDropBoxFile()) {
-                    CloudStorage cloudStorageDropbox = dataUtils.getAccount(OpenMode.DROPBOX);
-                    try {
-                        byte[] tempBytes = new byte[0];
-                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
-                        cloudStorageDropbox.upload(CloudUtil.stripPath(OpenMode.DROPBOX, file.getPath()),
-                                byteArrayInputStream, 0l, true);
-                        errorCallBack.done(file, true);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        errorCallBack.done(file, false);
-                    }
-                } else if (file.isBoxFile()) {
-                    CloudStorage cloudStorageBox = dataUtils.getAccount(OpenMode.BOX);
-                    try {
-                        byte[] tempBytes = new byte[0];
-                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
-                        cloudStorageBox.upload(CloudUtil.stripPath(OpenMode.BOX, file.getPath()),
-                                byteArrayInputStream, 0l, true);
-                        errorCallBack.done(file, true);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        errorCallBack.done(file, false);
-                    }
-                } else if (file.isOneDriveFile()) {
-                    CloudStorage cloudStorageOneDrive = dataUtils.getAccount(OpenMode.ONEDRIVE);
-                    try {
-                        byte[] tempBytes = new byte[0];
-                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
-                        cloudStorageOneDrive.upload(CloudUtil.stripPath(OpenMode.ONEDRIVE, file.getPath()),
-                                byteArrayInputStream, 0l, true);
-                        errorCallBack.done(file, true);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        errorCallBack.done(file, false);
-                    }
-                } else if (file.isGoogleDriveFile()) {
-                    CloudStorage cloudStorageGdrive = dataUtils.getAccount(OpenMode.GDRIVE);
-                    try {
-                        byte[] tempBytes = new byte[0];
-                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(tempBytes);
-                        cloudStorageGdrive.upload(CloudUtil.stripPath(OpenMode.GDRIVE, file.getPath()),
-                                byteArrayInputStream, 0l, true);
-                        errorCallBack.done(file, true);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        errorCallBack.done(file, false);
-                    }
-                } else if (file.isOtgFile()) {
+                if (file.isOtgFile()) {
 
                     // first check whether new file already exists
                     DocumentFile fileToCreate = OTGUtil.getDocumentFile(file.getPath(), context, false);

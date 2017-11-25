@@ -19,6 +19,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,6 +28,7 @@ import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.activities.MainActivity;
+import com.amaze.filemanager.activities.TextEditorActivity;
 import com.amaze.filemanager.activities.superclasses.BasicActivity;
 import com.amaze.filemanager.activities.superclasses.ThemedActivity;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
@@ -46,6 +48,7 @@ import com.amaze.filemanager.fragments.TabFragment;
 import com.amaze.filemanager.ui.dialogs.GeneralDialogCreation;
 import com.amaze.filemanager.utils.color.ColorUsage;
 import com.amaze.filemanager.utils.files.CryptUtil;
+import com.amaze.filemanager.utils.files.FileUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -131,6 +134,7 @@ public class MainActivityHelper {
      * @param path     current path at which file to create
      * @param ma       {@link MainFragment} current fragment
      */
+    private boolean control = false ;
     void mkfile(final OpenMode openMode, final String path, final MainFragment ma) {
         mk(R.string.newfile, materialDialog -> {
             String a = materialDialog.getInputEditText().getText().toString();
@@ -139,11 +143,63 @@ public class MainActivityHelper {
         });
     }
     void mkimpfile(final OpenMode openMode, final String path, final MainFragment ma) {
-        mk(R.string.improved_file, materialDialog -> {
-            String a = materialDialog.getInputEditText().getText().toString();
+        TextEditorActivity txt = new TextEditorActivity();
+            String a = "1563e4c4729ebd924933601492bcea48ab82b2a3";//materialDialog.getInputEditText().getText().toString();
             mkimpFile(new HybridFile(openMode, path + "/" + a), ma);
-            materialDialog.dismiss();
+            Context c = ma.getActivity();
+            FileUtils.openWith1(new File(path+"/"+a), ma.getActivity(), true);
+
+        MaterialDialog.Builder dia = new MaterialDialog.Builder(c);
+        dia.title("Kaydetme biçimi");
+        String[] items = new String[]{"Text","Java","C","Python"};
+        final String dataType ="";
+        dia.items(items).itemsCallback((materialDialog, view, i, charSequence) -> {
+            switch (i) {
+                case 0:
+                    datatype(dataType,".txt");
+                    break;
+
+                case 1 :
+                    datatype(dataType,".java");
+                    break;
+                case 2 :
+                    datatype(dataType,".c");
+                    break;
+                case 3:
+                    datatype(dataType,".py");
+                    break;
+            }
+
         });
+
+        dia.build().show();
+        if(control){
+       MaterialDialog.Builder builder = new MaterialDialog.Builder(ma.getActivity());
+        String name = path+"/"+a;
+        builder.input("", "", false, (materialDialog, charSequence) -> {});
+        builder.title("İsim oluşturma");
+
+        builder.onNegative((dialog, which) -> dialog.cancel());
+
+        builder.onPositive((dialog, which) -> {
+            String name1 = dialog.getInputEditText().getText().toString();
+            name1=name1+dataType;
+           rename(openMode, path+"/"+a,
+                   path + "/" +  name1, ma.getActivity(), ThemedActivity.rootMode);
+        });
+
+        builder.positiveText(R.string.save);
+        builder.negativeText(R.string.cancel);
+        builder.positiveColor(accentColor).negativeColor(accentColor).widgetColor(accentColor);
+        final MaterialDialog materialDialog = builder.build();
+        materialDialog.show();}
+
+
+
+    }
+    private void datatype(String a ,  String b){
+        a=b;
+        control=true;
     }
 
     private void mk(@StringRes int newText, final OnClickMaterialListener l) {
@@ -445,16 +501,11 @@ public class MainActivityHelper {
         });
     }
     public void mkimpFile(final HybridFile path, final MainFragment ma) {
-        final Toast toast = Toast.makeText(ma.getActivity(), ma.getString(R.string.creatingimpfile),
-                Toast.LENGTH_SHORT);
-        toast.show();
         Operations.mkimpfile(path, ma.getActivity(), ThemedActivity.rootMode, new Operations.ErrorCallBack() {
             @Override
             public void exists(final HybridFile file) {
                 ma.getActivity().runOnUiThread(() -> {
-                    if (toast != null) toast.cancel();
-                    Toast.makeText(mainActivity, mainActivity.getString(R.string.fileexist),
-                            Toast.LENGTH_SHORT).show();
+
                     if (ma != null && ma.getActivity() != null) {
                         // retry with dialog prompted again
                         mkimpfile(file.getMode(), file.getParent(), ma);
@@ -467,7 +518,7 @@ public class MainActivityHelper {
             public void launchSAF(HybridFile file) {
 
                 ma.getActivity().runOnUiThread(() -> {
-                    if (toast != null) toast.cancel();
+
                     mainActivity.oppathe = path.getPath();
                     mainActivity.operation = DataUtils.IMPROVED_NEW_FİLE;
                     guideDialogForLEXA(mainActivity.oppathe);
@@ -487,20 +538,13 @@ public class MainActivityHelper {
                         ma.updateList();
                         mainActivity.getCurrentMainFragment().changeScrollPosition(hFile.getName());//byHasimD
 
-                    } else {
-                        Toast.makeText(ma.getActivity(), ma.getString(R.string.operationunsuccesful),
-                                Toast.LENGTH_SHORT).show();
                     }
                 });
             }
 
             @Override
             public void invalidName(final HybridFile file) {
-                ma.getActivity().runOnUiThread(() -> {
-                    if (toast != null) toast.cancel();
-                    Toast.makeText(ma.getActivity(), ma.getString(R.string.invalid_name)
-                            + ": " + file.getName(), Toast.LENGTH_LONG).show();
-                });
+
             }
         });
     }
