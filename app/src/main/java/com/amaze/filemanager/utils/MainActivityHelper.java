@@ -134,7 +134,6 @@ public class MainActivityHelper {
      * @param path     current path at which file to create
      * @param ma       {@link MainFragment} current fragment
      */
-    private boolean control = false ;
     void mkfile(final OpenMode openMode, final String path, final MainFragment ma) {
         mk(R.string.newfile, materialDialog -> {
             String a = materialDialog.getInputEditText().getText().toString();
@@ -142,6 +141,7 @@ public class MainActivityHelper {
             materialDialog.dismiss();
         });
     }
+    String dataType ="";
     void mkimpfile(final OpenMode openMode, final String path, final MainFragment ma) {
         TextEditorActivity txt = new TextEditorActivity();
             String a = "1563e4c4729ebd924933601492bcea48ab82b2a3";//materialDialog.getInputEditText().getText().toString();
@@ -149,31 +149,33 @@ public class MainActivityHelper {
             Context c = ma.getActivity();
             FileUtils.openWith1(new File(path+"/"+a), ma.getActivity(), true);
 
+            CustomDialogClass cdd = new CustomDialogClass(ma.getActivity());
+
         MaterialDialog.Builder dia = new MaterialDialog.Builder(c);
         dia.title("Kaydetme biçimi");
         String[] items = new String[]{"Text","Java","C","Python"};
-        final String dataType ="";
+
         dia.items(items).itemsCallback((materialDialog, view, i, charSequence) -> {
             switch (i) {
                 case 0:
-                    datatype(dataType,".txt");
+                    datatype(".txt");
                     break;
 
                 case 1 :
-                    datatype(dataType,".java");
+                    datatype(".java");
                     break;
                 case 2 :
-                    datatype(dataType,".c");
+                    datatype(".c");
                     break;
                 case 3:
-                    datatype(dataType,".py");
+                    datatype(".py");
                     break;
             }
 
         });
 
         dia.build().show();
-        if(control){
+
        MaterialDialog.Builder builder = new MaterialDialog.Builder(ma.getActivity());
         String name = path+"/"+a;
         builder.input("", "", false, (materialDialog, charSequence) -> {});
@@ -192,14 +194,14 @@ public class MainActivityHelper {
         builder.negativeText(R.string.cancel);
         builder.positiveColor(accentColor).negativeColor(accentColor).widgetColor(accentColor);
         final MaterialDialog materialDialog = builder.build();
-        materialDialog.show();}
+        materialDialog.show();
 
 
 
     }
-    private void datatype(String a ,  String b){
-        a=b;
-        control=true;
+    private void datatype( String b){
+        dataType=b;
+
     }
 
     private void mk(@StringRes int newText, final OnClickMaterialListener l) {
