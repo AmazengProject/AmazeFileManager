@@ -15,11 +15,8 @@ import android.support.design.widget.BottomSheetDialogFragment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,7 +25,6 @@ import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.activities.MainActivity;
-import com.amaze.filemanager.activities.TextEditorActivity;
 import com.amaze.filemanager.activities.superclasses.BasicActivity;
 import com.amaze.filemanager.activities.superclasses.ThemedActivity;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
@@ -37,9 +33,9 @@ import com.amaze.filemanager.asynchronous.services.ZipService;
 import com.amaze.filemanager.database.CloudHandler;
 import com.amaze.filemanager.database.CryptHandler;
 import com.amaze.filemanager.database.models.EncryptedEntry;
-import com.amaze.filemanager.filesystem.HybridFileParcelable;
 import com.amaze.filemanager.filesystem.FileUtil;
 import com.amaze.filemanager.filesystem.HybridFile;
+import com.amaze.filemanager.filesystem.HybridFileParcelable;
 import com.amaze.filemanager.filesystem.Operations;
 import com.amaze.filemanager.fragments.CloudSheetFragment;
 import com.amaze.filemanager.fragments.MainFragment;
@@ -142,15 +138,19 @@ public class MainActivityHelper {
         });
     }
     String dataType ="";
-    void mkimpfile(final OpenMode openMode, final String path, final MainFragment ma) {
-        TextEditorActivity txt = new TextEditorActivity();
-            String a = "1563e4c4729ebd924933601492bcea48ab82b2a3";//materialDialog.getInputEditText().getText().toString();
-            mkimpFile(new HybridFile(openMode, path + "/" + a), ma);
-            Context c = ma.getActivity();
-            FileUtils.openWith1(new File(path+"/"+a), ma.getActivity(), true);
 
-            CustomDialogClass cdd = new CustomDialogClass(ma.getActivity());
+    private void showDialog2(final OpenMode openMode, final String path, final MainFragment ma) {
 
+        String a = "1563e4c4729ebd924933601492bcea48ab82b2a3";//materialDialog.getInputEditText().getText().toString();
+        String name = path+"/"+a;
+        mkimpFile(new HybridFile(openMode, path + "/" + a), ma);
+        FileUtils.openWith1(new File(path+"/"+a), ma.getActivity(), true);
+        mkimpfile(openMode,path,ma);
+    }
+
+    private void mkimpfile(final OpenMode openMode, final String path, final MainFragment ma) {
+
+        Context c = ma.getActivity();
         MaterialDialog.Builder dia = new MaterialDialog.Builder(c);
         dia.title("Kaydetme biçimi");
         String[] items = new String[]{"Text","Java","C","Python"};
@@ -160,7 +160,6 @@ public class MainActivityHelper {
                 case 0:
                     datatype(".txt");
                     break;
-
                 case 1 :
                     datatype(".java");
                     break;
@@ -171,12 +170,17 @@ public class MainActivityHelper {
                     datatype(".py");
                     break;
             }
-
+            showDialog(openMode, path, ma);
         });
-
         dia.build().show();
 
-       MaterialDialog.Builder builder = new MaterialDialog.Builder(ma.getActivity());
+
+
+
+    }
+    private void showDialog(final OpenMode openMode, final String path, final MainFragment ma) {
+        MaterialDialog.Builder builder = new MaterialDialog.Builder(ma.getActivity());
+        String a = "156e4c479ebd94960149bcea48ab8ba";//materialDialog.getInputEditText().getText().toString();
         String name = path+"/"+a;
         builder.input("", "", false, (materialDialog, charSequence) -> {});
         builder.title("İsim oluşturma");
@@ -186,8 +190,8 @@ public class MainActivityHelper {
         builder.onPositive((dialog, which) -> {
             String name1 = dialog.getInputEditText().getText().toString();
             name1=name1+dataType;
-           rename(openMode, path+"/"+a,
-                   path + "/" +  name1, ma.getActivity(), ThemedActivity.rootMode);
+            rename(openMode, name,
+                    ma.getCurrentPath() + "/" +  name1, ma.getActivity(), ThemedActivity.rootMode);
         });
 
         builder.positiveText(R.string.save);
@@ -195,10 +199,8 @@ public class MainActivityHelper {
         builder.positiveColor(accentColor).negativeColor(accentColor).widgetColor(accentColor);
         final MaterialDialog materialDialog = builder.build();
         materialDialog.show();
-
-
-
     }
+
     private void datatype( String b){
         dataType=b;
 
@@ -234,7 +236,7 @@ public class MainActivityHelper {
                 mkfile(ma.openMode, path, ma);
                 break;
             case NEw_IMPROVED_FILE:
-                mkimpfile(ma.openMode, path, ma);
+                showDialog2(ma.openMode, path, ma);
                 break;
             case NEW_CLOUD:
                 BottomSheetDialogFragment fragment = new CloudSheetFragment();
@@ -243,7 +245,7 @@ public class MainActivityHelper {
                 break;
         }
 
-	}
+    }
 
     public String getIntegralNames(String path) {
         String newPath = "";

@@ -963,7 +963,6 @@ public class MainActivity extends ThemedActivity implements
         SearchView searchView = (SearchView) menu.findItem(R.id.search).getActionView();
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(false);
-
         MenuItem search = menu.findItem(R.id.search);
         MenuItemCompat.setOnActionExpandListener(search, new MenuItemCompat.OnActionExpandListener() {
             @Override
@@ -972,7 +971,6 @@ public class MainActivity extends ThemedActivity implements
                 toolbar.setContentInsetsRelative(0, 0);
                 return true;
             }
-
             @Override
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 // Restoring
@@ -1432,7 +1430,7 @@ public class MainActivity extends ThemedActivity implements
 
         return null;
     }
-    
+
     public void refreshDrawer() {
 
         ArrayList<Item> sectionItems = new ArrayList<>();
