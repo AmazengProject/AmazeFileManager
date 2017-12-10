@@ -164,6 +164,7 @@ public class LayoutElementParcelable implements Parcelable {
     }
 
     public String getSize() {
+        //dosya tipi directory ise folderSize() ile hesaplanıp sonuç dönülecek
         return size;
     }
 

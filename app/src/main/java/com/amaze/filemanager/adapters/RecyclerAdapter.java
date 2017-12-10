@@ -609,6 +609,7 @@ public class RecyclerAdapter extends RecyclerArrayAdapter<String, RecyclerView.V
                     holder.txtDesc.setText("");
                 } else if (mainFrag.SHOW_SIZE) {
                     holder.txtDesc.setText(rowItem.getSize());
+                    //boyutun set edildiği iki yerden birisi burası
                 }
             } else {
                 // view is a grid view
@@ -708,6 +709,8 @@ public class RecyclerAdapter extends RecyclerArrayAdapter<String, RecyclerView.V
                 if (isBackButton) {
                     holder.date.setText(rowItem.getSize());
                     holder.txtDesc.setText("");
+                    //boyutun set edildiği iki yerden birisi burası
+
                 }/*else if(main.SHOW_SIZE)
                 holder.txtDesc.setText(rowItem.getSize());
            */

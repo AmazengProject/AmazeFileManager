@@ -40,6 +40,7 @@ public class ItemViewHolder extends RecyclerView.ViewHolder {
         rl = view.findViewById(R.id.second);
         perm = (TextView) view.findViewById(R.id.permis);
         date = (TextView) view.findViewById(R.id.date);
+        //dosya boyutunun yazıldığı bloğun değişken ismi bulundu
         txtDesc = (TextView) view.findViewById(R.id.secondLine);
         apkIcon = (ImageView) view.findViewById(R.id.apk_icon);
         genericText = (TextView) view.findViewById(R.id.generictext);
