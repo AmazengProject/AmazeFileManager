@@ -497,6 +497,7 @@ public class HybridFile {
      * @deprecated use {@link #folderSize(Context)}
      * @return
      */
+
     public long folderSize() {
         long size = 0L;
 
@@ -1023,7 +1024,7 @@ public class HybridFile {
             case ROOT:
                 File file = new File(path);
                 LayoutElementParcelable layoutElement;
-                if (isDirectory()) {
+                if (isDirectory()) {//directory için SIZE 0 olarak atanıyor
 
                     layoutElement = new LayoutElementParcelable(mainFragment.folder,
                                     path, RootHelper.parseFilePermission(file),

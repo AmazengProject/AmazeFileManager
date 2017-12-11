@@ -95,6 +95,7 @@ public class LayoutElementParcelable implements Parcelable {
         this.desc = desc;
         this.permissions = permissions.trim();
         this.symlink = symlink.trim();
+        //size constructorda atanıyor
         this.size = size;
         this.header = header;
         this.longSize=longSize;
@@ -165,6 +166,7 @@ public class LayoutElementParcelable implements Parcelable {
 
     public String getSize() {
         //dosya tipi directory ise folderSize() ile hesaplanıp sonuç dönülecek
+
         return size;
     }
 

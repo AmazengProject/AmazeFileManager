@@ -1508,7 +1508,7 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
             if (path.equals(smbPath)) {
                 if (name.endsWith("$")) continue;
             }
-            if (aMFile.isDirectory()) {
+            if (aMFile.isDirectory()) {//directory için SIZE 0 olarak atanıyor
                 folder_count++;
                 LayoutElementParcelable layoutElement = new LayoutElementParcelable(folder, name, aMFile.getPath(),
                         "", "", "", 0, false, aMFile.lastModified() + "", true);
@@ -1539,7 +1539,7 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
         File f = new File(mFile.getPath());
         String size = "";
         if (!dataUtils.isFileHidden(mFile.getPath())) {
-            if (mFile.isDirectory()) {
+            if (mFile.isDirectory()) {//directory için SIZE 0 olarak atanıyor
                 size = "";
                 LayoutElementParcelable layoutElement = new LayoutElementParcelable(folder, f.getPath(), mFile.getPermission(),
                         mFile.getLink(), size, 0, true, false, mFile.getDate() + "");
