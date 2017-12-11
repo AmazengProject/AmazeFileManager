@@ -200,6 +200,7 @@ public class ItemPopupMenu extends PopupMenu implements PopupMenu.OnMenuItemClic
                         mainFragment.openMode, rowItem.generateBaseFile(),
                         rowItem.generateBaseFile().getParent(context), utilitiesProvider, false);
                 return true;
+            //compress isleminin eklenmesi gereken yer bulundu
             case R.id.return_select:
                 mainFragment.returnIntentResults(rowItem.generateBaseFile());
                 return true;

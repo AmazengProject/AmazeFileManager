@@ -732,6 +732,7 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
                     mode.finish();
                     return true;
                 }
+                //compress isleminin suanda yapildigi yer bulundu
                 case R.id.compress:
                     ArrayList<HybridFileParcelable> copies1 = new ArrayList<>();
                     for (int i4 = 0; i4 < checkedItems.size(); i4++) {
