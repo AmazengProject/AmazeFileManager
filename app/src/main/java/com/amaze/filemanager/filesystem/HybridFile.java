@@ -1025,10 +1025,14 @@ public class HybridFile {
                 File file = new File(path);
                 LayoutElementParcelable layoutElement;
                 if (isDirectory()) {//directory için SIZE 0 olarak atanıyor
+                    String size;
+                    long longSize;
+                    longSize=FileUtils.folderSize(new File(path), null);
+                    size=""+longSize;
 
                     layoutElement = new LayoutElementParcelable(mainFragment.folder,
                                     path, RootHelper.parseFilePermission(file),
-                                    "", folderSize() + "", 0, true, false,
+                                    "", size + "", longSize, true, false,
                                     file.lastModified() + "");
                 } else {
                     layoutElement = new LayoutElementParcelable(Icons.loadMimeIcon(

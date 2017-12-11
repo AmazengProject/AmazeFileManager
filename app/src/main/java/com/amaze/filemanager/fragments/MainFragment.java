@@ -1538,18 +1538,20 @@ public class MainFragment extends android.support.v4.app.Fragment implements Bot
     private LayoutElementParcelable addTo(HybridFileParcelable mFile) {
         File f = new File(mFile.getPath());
         String size = "";
+        long longSize;
         if (!dataUtils.isFileHidden(mFile.getPath())) {
             if (mFile.isDirectory()) {//directory için SIZE 0 olarak atanıyor
-                size = "";
+                longSize=FileUtils.folderSize(f,null);
+                size = Formatter.formatFileSize(getContext(), longSize);
                 LayoutElementParcelable layoutElement = new LayoutElementParcelable(folder, f.getPath(), mFile.getPermission(),
-                        mFile.getLink(), size, 0, true, false, mFile.getDate() + "");
+                        mFile.getLink(), size, longSize, true, false, mFile.getDate() + "");
 
                 layoutElement.setMode(mFile.getMode());
                 addLayoutElement(layoutElement);
                 folder_count++;
                 return layoutElement;
             } else {
-                long longSize = 0;
+                longSize = 0;
                 try {
                     if (mFile.getSize() != -1) {
                         longSize = mFile.getSize();
