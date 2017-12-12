@@ -100,7 +100,12 @@ public class FileListSorter implements Comparator<LayoutElementParcelable> {
                 return asc * Long.valueOf(file1.getlongSize()).compareTo(file2.getlongSize());
             } else {
 
-                return file1.getTitle().compareToIgnoreCase(file2.getTitle());
+                return asc * file1.generateBaseFile().folderSize()<file2.generateBaseFile().folderSize() ?
+                        -1 : 1;
+                        //file1 ve file2 klasör ise direk isimlerine gore karsilastiriliyor
+                        //bunun yerine folderSize() ile toplam boyutlarını hesaplayıp karsilastirildiginda
+                        // sortBy size klasörler icin de calismaya basliyor
+                        //file1.getTitle().compareToIgnoreCase(file2.getTitle());
             }
 
         } else if(sort ==3) {
@@ -118,7 +123,7 @@ public class FileListSorter implements Comparator<LayoutElementParcelable> {
                 }
                 return res;
             } else {
-                return  file1.getTitle().compareToIgnoreCase(file2.getTitle());
+                return file1.getTitle().compareToIgnoreCase(file2.getTitle());
             }
         }
         return 0;
