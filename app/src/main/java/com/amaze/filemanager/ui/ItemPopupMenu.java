@@ -201,6 +201,13 @@ public class ItemPopupMenu extends PopupMenu implements PopupMenu.OnMenuItemClic
                         rowItem.generateBaseFile().getParent(context), utilitiesProvider, false);
                 return true;
             //compress isleminin eklenmesi gereken yer bulundu
+            case R.id.compress:
+                ArrayList<HybridFileParcelable> copies1 = new ArrayList<>();
+                copies1.add(rowItem.generateBaseFile());
+                GeneralDialogCreation.showCompressDialog((MainActivity)  mainFragment.getActivity(), copies1, rowItem.generateBaseFile().getPath());
+                //rowItem.getMode().finish();
+                //mainFragment.mActionMode.finish();
+                return true;
             case R.id.return_select:
                 mainFragment.returnIntentResults(rowItem.generateBaseFile());
                 return true;
